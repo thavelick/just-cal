@@ -31,6 +31,42 @@ def main() -> NoReturn:
     add_parser.add_argument("-l", "--location", help="Event location")
     add_parser.add_argument("--all-day", action="store_true", help="Create all-day event")
 
+    # List subcommand
+    list_parser = subparsers.add_parser("list", help="List events")
+    list_parser.add_argument(
+        "--from",
+        dest="from_date",
+        help="Start of range (default: today, supports natural language)",
+    )
+    list_parser.add_argument("--to", dest="to_date", help="End of range (default: 7 days from now)")
+    list_parser.add_argument(
+        "--format",
+        choices=["table", "json"],
+        default="table",
+        help="Output format (default: table)",
+    )
+    list_parser.add_argument("-n", "--limit", type=int, help="Limit number of results")
+
+    # Search subcommand
+    search_parser = subparsers.add_parser("search", help="Search events")
+    search_parser.add_argument("query", help="Search query")
+    search_parser.add_argument(
+        "--field",
+        choices=["title", "description", "location", "all"],
+        default="all",
+        help="Search field (default: all)",
+    )
+    search_parser.add_argument(
+        "--from", dest="from_date", help="Start of date range (supports natural language)"
+    )
+    search_parser.add_argument("--to", dest="to_date", help="End of date range")
+    search_parser.add_argument(
+        "--format",
+        choices=["table", "json"],
+        default="table",
+        help="Output format (default: table)",
+    )
+
     # Config subcommand
     config_parser = subparsers.add_parser("config", help="Manage configuration")
     config_group = config_parser.add_mutually_exclusive_group(required=True)
@@ -54,6 +90,14 @@ def main() -> NoReturn:
             from just_cal.commands.add import handle_add_command
 
             handle_add_command(args)
+        elif args.command == "list":
+            from just_cal.commands.list import handle_list_command
+
+            handle_list_command(args)
+        elif args.command == "search":
+            from just_cal.commands.search import handle_search_command
+
+            handle_search_command(args)
         elif args.command == "config":
             handle_config_command(args)
         else:
