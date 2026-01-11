@@ -1,44 +1,191 @@
-# Agent Instructions
+# CLAUDE.md
 
-This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Quick Reference
+## Project Overview
 
+**just-cal** is a Python CLI utility for managing Nextcloud calendars via CalDAV. It provides natural language date parsing, secure credential storage, and comprehensive calendar operations.
+
+**Tech Stack:**
+- CalDAV: `python-caldav` (Nextcloud-tested)
+- CLI: `argparse` (standard library)
+- Date Parsing: `dateparser` (natural language support)
+- Config: TOML format (`tomli`/`tomli-w`)
+- Security: `keyring` (system keychain integration)
+- Testing: `pytest` with coverage
+
+**Project Management:** This project uses `bd` (beads) for issue tracking. Prefix: `jc-`
+
+## Development Commands
+
+### Setup and Dependencies
 ```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim work
-bd close <id>         # Complete work
-bd sync               # Sync with git
+make setup          # Install dependencies with uv sync
+make update         # Update all dependencies
+uv add <package>    # Add runtime dependency
+uv add --dev <pkg>  # Add dev dependency
 ```
 
-## Developer Rules
+### Running Tests
+```bash
+make test                    # Run all tests (65 tests currently)
+make test-coverage          # Run with coverage report (target: >90%)
+uv run pytest tests/        # Run all tests directly
+uv run pytest tests/test_caldav_client.py  # Run single test file
+uv run pytest tests/test_caldav_client.py::test_connect_success  # Run single test
+uv run pytest -k "search"   # Run tests matching pattern
+```
+
+### Linting and Formatting
+```bash
+make lint           # Run ruff + pyright type checking
+make lint-fix       # Auto-fix issues with ruff
+make format         # Format code with ruff
+uv run ruff check src/ tests/              # Lint specific directories
+uv run ruff check --fix src/ tests/        # Auto-fix linting issues
+uv run pyright src/ tests/                 # Type check
+```
+
+**Important:** Use `uv run` prefix for all Python tools to ensure proper virtual environment usage.
+
+### Cleaning
+```bash
+make clean          # Remove __pycache__, .pytest_cache, etc.
+```
+
+## Architecture
+
+### Core Components
+
+**config.py** - Configuration management
+- Loads/saves TOML config from `~/.config/justcal/config.toml`
+- Integrates with system keyring for secure password storage
+- Note: `initialize_interactive()` exists but not yet wired to CLI
+
+**caldav_client.py** - CalDAV operations wrapper
+- Wraps `python-caldav` library for Nextcloud communication
+- Stores `_caldav_object` reference on events returned from CalDAV for later update/delete operations
+
+**event.py** - Event model
+- Event dataclass with iCalendar format conversion using `icalendar` library
+
+**exceptions.py** - Custom exception hierarchy
+- All custom exceptions inherit from `JustCalError` base class
+
+**cli.py** - Command-line interface (currently minimal)
+- Entry point defined in pyproject.toml
+- Will route to commands in `commands/` directory (not yet implemented)
+
+### Data Flow
+
+```
+CLI (cli.py)
+  ↓
+Config (config.py) ← reads ~/.config/justcal/config.toml
+  ↓                 ← gets password from system keyring
+CalDAVClient (caldav_client.py) ← uses python-caldav library
+  ↓
+Event (event.py) ← converts to/from iCalendar format
+  ↓
+Nextcloud CalDAV Server
+```
+
+### Configuration
+
+Config file location: `~/.config/justcal/config.toml`
+
+```toml
+[caldav]
+url = "https://nextcloud.example.com/remote.php/dav"
+username = "username"
+password = ""  # Empty = use keyring (recommended)
+calendar = "Personal"
+
+[preferences]
+default_duration = 60  # minutes
+timezone = "America/New_York"
+date_format = "%Y-%m-%d %H:%M"
+
+[security]
+use_keyring = true  # Store password in system keychain
+```
+
+Password security: Passwords stored in system keyring by default. Config file gets 600 permissions on save.
+
+## Project Rules
 
 ### Linting and Code Quality
 
-**NEVER ignore linting errors or warnings by adding them to the ignore list.**
+**NEVER ignore linting errors by adding them to ignore lists.**
 
 If you encounter a linting issue:
-1. **First choice:** Fix it immediately if it's straightforward
+1. **First choice:** Fix it immediately if straightforward
 2. **Second choice:** Create a bd task to fix it later if it requires more work
-3. **NEVER:** Add it to the ignore list in pyproject.toml or suppress it with comments
+3. **NEVER:** Add it to ignore list in pyproject.toml or suppress with comments
 
-The only acceptable ignores are:
-- Issues that are genuinely false positives across the entire codebase
-- Style preferences that conflict with the formatter (e.g., E501 line length)
+Only acceptable ignores:
+- Genuine false positives across entire codebase
+- Style preferences conflicting with formatter (e.g., E501 line length)
 
-When in doubt, create a bd task and let the user decide.
+### Exception Handling
 
-## Managing Dependencies
+Always use proper exception chaining with `from e`:
+```python
+try:
+    risky_operation()
+except Exception as e:
+    raise CustomError(f"Operation failed: {e}") from e
+```
 
-**IMPORTANT:** When creating dependencies with `bd dep add`, the syntax is:
+This fixes B904 linting errors and preserves stack traces.
+
+### Don't Build Features Prematurely
+
+Follow YAGNI (You Aren't Gonna Need It):
+- Don't add parameters for future features (like `recurrence_mode` before Phase 7)
+- Don't raise `NotImplementedError` for unbuilt features
+- Don't write code that isn't needed yet
+- Add features when they're actually being implemented
+
+Example of what NOT to do:
+```python
+def delete_event(self, uid: str, recurrence_mode: str = "all"):
+    if recurrence_mode != "all":
+        raise NotImplementedError("Coming in Phase 7")
+    # ... actual implementation
+```
+
+Better: Remove the parameter entirely until Phase 7.
+
+## Issue Tracking with bd
+
+This project uses **bd** (beads) for task management. Issue prefix: `jc-`
+
+**IMPORTANT:**
+- **DO NOT use the TodoWrite tool.** Use bd for all task tracking.
+- **Goal: Every bead should take ~2 minutes.** Be very granular.
+- Before working on any task, see if it can be broken down into smaller beads.
+
+### Quick Reference
+```bash
+bd ready                                    # Find available work
+bd show <id>                                # View issue details
+bd create "Task description" -p 2           # Create new task with priority
+bd update <id> --status in_progress        # Claim work
+bd close <id>                               # Complete work
+bd sync                                     # Sync with git
+```
+
+### Managing Dependencies
+
+**CRITICAL:** When creating dependencies with `bd dep add`, the syntax is:
 ```bash
 bd dep add <issue-that-depends> <issue-it-depends-on>
 ```
 
 In other words: **the blocker comes SECOND**.
 
-**Example:** If Phase 2 must be completed before Phase 3 can start:
+**Example:** If Phase 2 must complete before Phase 3 can start:
 ```bash
 bd dep add jc-phase3 jc-phase2
 # This means: jc-phase3 depends on (is blocked by) jc-phase2
@@ -51,33 +198,6 @@ bd dep add jc-phase2 jc-phase3  # WRONG! This makes phase2 depend on phase3
 
 **Verify dependencies:**
 ```bash
-bd dep tree <issue-id>  # Visualize dependency tree
-bd show <issue-id>       # See what an issue depends on and what depends on it
+bd dep tree <issue-id>    # Visualize dependency tree
+bd show <issue-id>        # See what issue depends on and what depends on it
 ```
-
-## Landing the Plane (Session Completion)
-
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
-
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-
