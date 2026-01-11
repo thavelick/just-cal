@@ -1,9 +1,8 @@
 """CalDAV client for interacting with Nextcloud calendars."""
 
 from datetime import datetime
-from typing import Optional, List
+
 import caldav
-from caldav.elements import dav
 
 from .config import Config
 from .event import Event
@@ -20,8 +19,8 @@ class CalDAVClient:
             config: Configuration object
         """
         self.config = config
-        self.client: Optional[caldav.DAVClient] = None
-        self.calendar: Optional[caldav.Calendar] = None
+        self.client: caldav.DAVClient | None = None
+        self.calendar: caldav.Calendar | None = None
 
     def connect(self) -> None:
         """Establish CalDAV connection.
@@ -30,23 +29,19 @@ class CalDAVClient:
             AuthenticationError: If authentication fails
             ConnectionError: If connection fails
         """
-        url = self.config.get('caldav', 'url')
-        username = self.config.get('caldav', 'username')
+        url = self.config.get("caldav", "url")
+        username = self.config.get("caldav", "username")
 
         try:
             password = self.config.get_password()
         except Exception as e:
-            raise AuthenticationError(f"Failed to get password: {e}")
+            raise AuthenticationError(f"Failed to get password: {e}") from e
 
         if not url or not username:
             raise ConnectionError("CalDAV URL and username must be configured")
 
         try:
-            self.client = caldav.DAVClient(
-                url=url,
-                username=username,
-                password=password
-            )
+            self.client = caldav.DAVClient(url=url, username=username, password=password)
 
             # Test the connection by getting the principal
             principal = self.client.principal()
@@ -57,7 +52,7 @@ class CalDAVClient:
                 raise ConnectionError("No calendars found")
 
             # Find the specified calendar
-            calendar_name = self.config.get('caldav', 'calendar', 'Personal')
+            calendar_name = self.config.get("caldav", "calendar", "Personal")
             self.calendar = self._find_calendar(calendars, calendar_name)
 
             if not self.calendar:
@@ -68,13 +63,13 @@ class CalDAVClient:
                 )
 
         except caldav.lib.error.AuthorizationError as e:
-            raise AuthenticationError(f"Authentication failed: {e}")
+            raise AuthenticationError(f"Authentication failed: {e}") from e
         except Exception as e:
             if isinstance(e, (AuthenticationError, ConnectionError)):
                 raise
-            raise ConnectionError(f"Failed to connect to CalDAV server: {e}")
+            raise ConnectionError(f"Failed to connect to CalDAV server: {e}") from e
 
-    def _find_calendar(self, calendars: List, calendar_name: str) -> Optional[caldav.Calendar]:
+    def _find_calendar(self, calendars: list, calendar_name: str) -> caldav.Calendar | None:
         """Find a calendar by name.
 
         Args:
@@ -106,12 +101,12 @@ class CalDAVClient:
 
         try:
             ical_data = event.to_ical()
-            cal_event = self.calendar.save_event(ical_data)
+            self.calendar.save_event(ical_data)
             return event.uid
         except Exception as e:
-            raise ConnectionError(f"Failed to add event: {e}")
+            raise ConnectionError(f"Failed to add event: {e}") from e
 
-    def list_events(self, start: datetime, end: datetime) -> List[Event]:
+    def list_events(self, start: datetime, end: datetime) -> list[Event]:
         """List events in date range.
 
         Args:
@@ -129,12 +124,7 @@ class CalDAVClient:
 
         try:
             # Search for events in the date range
-            events = self.calendar.search(
-                start=start,
-                end=end,
-                event=True,
-                expand=True
-            )
+            events = self.calendar.search(start=start, end=end, event=True, expand=True)
 
             result = []
             for cal_event in events:
@@ -149,9 +139,9 @@ class CalDAVClient:
 
             return result
         except Exception as e:
-            raise ConnectionError(f"Failed to list events: {e}")
+            raise ConnectionError(f"Failed to list events: {e}") from e
 
-    def search_events(self, query: str, field: str = 'all') -> List[Event]:
+    def search_events(self, query: str, field: str = "all") -> list[Event]:
         """Search events by query.
 
         Args:
@@ -171,6 +161,7 @@ class CalDAVClient:
             # Get all events (we'll filter them ourselves)
             # CalDAV doesn't have great search capabilities, so we search client-side
             from datetime import timedelta
+
             end = datetime.now() + timedelta(days=365)  # Search next year
             start = datetime.now() - timedelta(days=365)  # Search last year
 
@@ -180,21 +171,29 @@ class CalDAVClient:
             result = []
 
             for event in all_events:
-                if field == 'all':
-                    if (query_lower in event.title.lower() or
-                        (event.description and query_lower in event.description.lower()) or
-                        (event.location and query_lower in event.location.lower())):
+                if field == "all":
+                    if (
+                        query_lower in event.title.lower()
+                        or (event.description and query_lower in event.description.lower())
+                        or (event.location and query_lower in event.location.lower())
+                    ):
                         result.append(event)
-                elif field == 'title' and query_lower in event.title.lower():
+                elif field == "title" and query_lower in event.title.lower():
                     result.append(event)
-                elif field == 'description' and event.description and query_lower in event.description.lower():
+                elif (
+                    field == "description"
+                    and event.description
+                    and query_lower in event.description.lower()
+                ):
                     result.append(event)
-                elif field == 'location' and event.location and query_lower in event.location.lower():
+                elif (
+                    field == "location" and event.location and query_lower in event.location.lower()
+                ):
                     result.append(event)
 
             return result
         except Exception as e:
-            raise ConnectionError(f"Failed to search events: {e}")
+            raise ConnectionError(f"Failed to search events: {e}") from e
 
     def get_event_by_uid(self, uid: str) -> Event:
         """Get event by UID.
@@ -227,7 +226,7 @@ class CalDAVClient:
         except EventNotFoundError:
             raise
         except Exception as e:
-            raise ConnectionError(f"Failed to get event: {e}")
+            raise ConnectionError(f"Failed to get event: {e}") from e
 
     def update_event(self, uid: str, updated_event: Event) -> None:
         """Update existing event.
@@ -248,7 +247,7 @@ class CalDAVClient:
             original = self.get_event_by_uid(uid)
 
             # Delete the old event
-            if hasattr(original, '_caldav_object'):
+            if hasattr(original, "_caldav_object"):
                 original._caldav_object.delete()
 
             # Add the updated event with the same UID
@@ -257,14 +256,13 @@ class CalDAVClient:
         except EventNotFoundError:
             raise
         except Exception as e:
-            raise ConnectionError(f"Failed to update event: {e}")
+            raise ConnectionError(f"Failed to update event: {e}") from e
 
-    def delete_event(self, uid: str, recurrence_mode: str = 'all') -> None:
+    def delete_event(self, uid: str) -> None:
         """Delete event.
 
         Args:
             uid: UID of event to delete
-            recurrence_mode: How to handle recurring events ('all', 'this', 'this-and-future')
 
         Raises:
             EventNotFoundError: If event not found
@@ -277,20 +275,15 @@ class CalDAVClient:
             # Get the event
             event = self.get_event_by_uid(uid)
 
-            # For now, only support deleting all instances
-            # Recurring event support will be added in Phase 7
-            if recurrence_mode != 'all':
-                raise NotImplementedError("Recurring event deletion will be added in Phase 7")
-
             # Delete the event
-            if hasattr(event, '_caldav_object'):
+            if hasattr(event, "_caldav_object"):
                 event._caldav_object.delete()
             else:
                 raise ConnectionError("Event object doesn't have CalDAV reference")
         except EventNotFoundError:
             raise
         except Exception as e:
-            raise ConnectionError(f"Failed to delete event: {e}")
+            raise ConnectionError(f"Failed to delete event: {e}") from e
 
     def test_connection(self) -> bool:
         """Test CalDAV connection.
