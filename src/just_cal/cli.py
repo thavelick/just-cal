@@ -18,13 +18,30 @@ def main() -> NoReturn:
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
+    # Add subcommand
+    add_parser = subparsers.add_parser("add", help="Add a new event")
+    add_parser.add_argument("-t", "--title", required=True, help="Event title")
+    add_parser.add_argument(
+        "-s", "--start", required=True, help="Start date/time (natural language or ISO format)"
+    )
+    add_parser.add_argument(
+        "-e", "--end", help="End date/time (optional, defaults to start + 1 hour)"
+    )
+    add_parser.add_argument("-d", "--description", help="Event description")
+    add_parser.add_argument("-l", "--location", help="Event location")
+    add_parser.add_argument("--all-day", action="store_true", help="Create all-day event")
+
     # Config subcommand
     config_parser = subparsers.add_parser("config", help="Manage configuration")
     config_group = config_parser.add_mutually_exclusive_group(required=True)
-    config_group.add_argument("--init", action="store_true", help="Initialize configuration interactively")
+    config_group.add_argument(
+        "--init", action="store_true", help="Initialize configuration interactively"
+    )
     config_group.add_argument("--show", action="store_true", help="Display current configuration")
     config_group.add_argument("--test", action="store_true", help="Test CalDAV connection")
-    config_group.add_argument("--set", nargs=2, metavar=("KEY", "VALUE"), help="Set configuration value")
+    config_group.add_argument(
+        "--set", nargs=2, metavar=("KEY", "VALUE"), help="Set configuration value"
+    )
 
     args = parser.parse_args()
 
@@ -33,7 +50,11 @@ def main() -> NoReturn:
         sys.exit(0)
 
     try:
-        if args.command == "config":
+        if args.command == "add":
+            from just_cal.commands.add import handle_add_command
+
+            handle_add_command(args)
+        elif args.command == "config":
             handle_config_command(args)
         else:
             print(f"Unknown command: {args.command}", file=sys.stderr)
@@ -63,6 +84,7 @@ def handle_config_command(args: argparse.Namespace) -> None:
         print(config.show())
     elif args.test:
         from just_cal.caldav_client import CalDAVClient
+
         config = Config()
         config.load()
         client = CalDAVClient(config)
