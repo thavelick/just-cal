@@ -36,7 +36,7 @@ lint-fix: # Run linters with auto-fix
 
 test: # Run all tests
 	@echo "Running all tests.."
-	uv run pytest tests/
+	uv run pytest -q tests/
 
 test-unit: # Run unit tests
 	@echo "Running unit tests.."
