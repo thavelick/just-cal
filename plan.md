@@ -35,9 +35,9 @@ just-cal/
 ├── pyproject.toml              # uv project config, scripts entry point
 ├── README.md
 ├── .gitignore
-├── src/justcal/
+├── src/just_cal/
 │   ├── __init__.py
-│   ├── __main__.py             # python -m justcal entry point
+│   ├── __main__.py             # python -m just_cal entry point
 │   ├── cli.py                  # CLI argument parsing, command routing
 │   ├── config.py               # Configuration management, credential handling
 │   ├── caldav_client.py        # CalDAV connection and operations
@@ -284,12 +284,12 @@ Options:
 
 ## Critical Files (Priority Order)
 
-1. **src/justcal/config.py** - Configuration management; required before any operations
-2. **src/justcal/caldav_client.py** - Core CalDAV operations; central integration with Nextcloud
-3. **src/justcal/event.py** - Event model; used by all commands
-4. **src/justcal/cli.py** - CLI routing; main entry point
-5. **src/justcal/utils/date_parser.py** - Date parsing; critical for user experience
-6. **src/justcal/commands/add.py** - Most complex command (date parsing, recurrence)
+1. **src/just_cal/config.py** - Configuration management; required before any operations
+2. **src/just_cal/caldav_client.py** - Core CalDAV operations; central integration with Nextcloud
+3. **src/just_cal/event.py** - Event model; used by all commands
+4. **src/just_cal/cli.py** - CLI routing; main entry point
+5. **src/just_cal/utils/date_parser.py** - Date parsing; critical for user experience
+6. **src/just_cal/commands/add.py** - Most complex command (date parsing, recurrence)
 
 ## Key Implementation Details
 

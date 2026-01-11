@@ -45,3 +45,4 @@ config.toml
 # OS
 .DS_Store
 Thumbs.db
+.Trash
