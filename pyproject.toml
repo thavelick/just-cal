@@ -1,0 +1,32 @@
+[project]
+name = "just-cal"
+version = "0.1.0"
+description = "A Python CLI utility for managing Nextcloud calendars via CalDAV"
+readme = "README.md"
+authors = [
+    { name = "Tristan Havelick", email = "tristan@havelick.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "caldav>=2.2.3",
+    "dateparser>=1.2.2",
+    "icalendar>=6.3.2",
+    "keyring>=25.7.0",
+    "tomli>=2.4.0",
+    "tomli-w>=1.2.0",
+]
+
+[project.scripts]
+justcal = "justcal.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9.22,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "freezegun>=1.5.5",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+]
