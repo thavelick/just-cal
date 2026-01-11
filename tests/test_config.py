@@ -238,3 +238,124 @@ def test_show_config(sample_config_data):
     assert "***" in output
     assert "https://example.com/dav" in output
     assert "testuser" in output
+
+
+@patch("just_cal.config.keyring")
+@patch("getpass.getpass")
+@patch("builtins.input")
+def test_initialize_interactive_with_valid_input(
+    mock_input, mock_getpass, mock_keyring, temp_config_file
+):
+    """Test interactive initialization with valid input."""
+    # Mock user inputs
+    mock_input.side_effect = [
+        "https://nextcloud.example.com/remote.php/dav",  # URL
+        "testuser",  # username
+        "Personal",  # calendar
+        "America/New_York",  # timezone
+    ]
+    mock_getpass.return_value = "testpassword"
+
+    config = Config(config_path=temp_config_file)
+    config.initialize_interactive()
+
+    # Verify config was saved
+    assert temp_config_file.exists()
+
+    # Verify password was stored in keyring
+    mock_keyring.set_password.assert_called_once_with("justcal", "testuser", "testpassword")
+
+    # Verify config data
+    assert config.get("caldav", "url") == "https://nextcloud.example.com/remote.php/dav"
+    assert config.get("caldav", "username") == "testuser"
+    assert config.get("caldav", "calendar") == "Personal"
+    assert config.get("preferences", "timezone") == "America/New_York"
+    assert config.get("caldav", "password") == ""  # Should be empty when using keyring
+
+
+@patch("just_cal.config.keyring")
+@patch("getpass.getpass")
+@patch("builtins.input")
+def test_initialize_interactive_with_defaults(
+    mock_input, mock_getpass, mock_keyring, temp_config_file
+):
+    """Test interactive initialization using default values."""
+    # Mock user inputs (empty strings to use defaults)
+    mock_input.side_effect = [
+        "",  # URL (should use default)
+        "testuser",  # username
+        "",  # calendar (should use default "Personal")
+        "",  # timezone (should use default "America/New_York")
+    ]
+    mock_getpass.return_value = "testpassword"
+
+    config = Config(config_path=temp_config_file)
+    config.initialize_interactive()
+
+    # Verify defaults were used
+    assert config.get("caldav", "url") == "https://nextcloud.example.com/remote.php/dav"
+    assert config.get("caldav", "username") == "testuser"
+    assert config.get("caldav", "calendar") == "Personal"
+    assert config.get("preferences", "timezone") == "America/New_York"
+
+
+@patch("getpass.getpass")
+@patch("builtins.input")
+def test_initialize_interactive_empty_username(mock_input, mock_getpass, temp_config_file):
+    """Test interactive initialization fails with empty username."""
+    mock_input.side_effect = [
+        "https://nextcloud.example.com/remote.php/dav",  # URL
+        "",  # Empty username
+    ]
+    mock_getpass.return_value = "testpassword"
+
+    config = Config(config_path=temp_config_file)
+
+    with pytest.raises(ConfigurationError, match="Username is required"):
+        config.initialize_interactive()
+
+
+@patch("getpass.getpass")
+@patch("builtins.input")
+def test_initialize_interactive_empty_password(mock_input, mock_getpass, temp_config_file):
+    """Test interactive initialization fails with empty password."""
+    mock_input.side_effect = [
+        "https://nextcloud.example.com/remote.php/dav",  # URL
+        "testuser",  # username
+    ]
+    mock_getpass.return_value = ""  # Empty password
+
+    config = Config(config_path=temp_config_file)
+
+    with pytest.raises(ConfigurationError, match="Password is required"):
+        config.initialize_interactive()
+
+
+@patch("just_cal.config.keyring")
+@patch("getpass.getpass")
+@patch("builtins.input")
+def test_initialize_interactive_keyring_failure(
+    mock_input, mock_getpass, mock_keyring, temp_config_file, capsys
+):
+    """Test interactive initialization handles keyring failure by falling back to config file."""
+    # Mock keyring to fail
+    mock_keyring.set_password.side_effect = Exception("Keyring not available")
+
+    mock_input.side_effect = [
+        "https://nextcloud.example.com/remote.php/dav",  # URL
+        "testuser",  # username
+        "Personal",  # calendar
+        "America/New_York",  # timezone
+    ]
+    mock_getpass.return_value = "testpassword"
+
+    config = Config(config_path=temp_config_file)
+    config.initialize_interactive()
+
+    # Verify password was stored in config file as fallback
+    assert config.get("caldav", "password") == "testpassword"
+
+    # Verify warning was printed
+    captured = capsys.readouterr()
+    assert "Warning" in captured.out
+    assert "Keyring not available" in captured.out

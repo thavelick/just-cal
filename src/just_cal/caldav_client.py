@@ -56,17 +56,22 @@ class CalDAVClient:
             self.calendar = self._find_calendar(calendars, calendar_name)
 
             if not self.calendar:
-                available = [cal.name for cal in calendars]
+                available = [cal.name for cal in calendars if cal.name]
                 raise ConnectionError(
                     f"Calendar '{calendar_name}' not found. "
                     f"Available calendars: {', '.join(available)}"
                 )
 
-        except caldav.lib.error.AuthorizationError as e:
-            raise AuthenticationError(f"Authentication failed: {e}") from e
         except Exception as e:
+            # Re-raise our custom exceptions
             if isinstance(e, (AuthenticationError, ConnectionError)):
                 raise
+            # Check if it's an authorization error from caldav library
+            error_str = str(e).lower()
+            error_type = str(type(e).__name__).lower()
+            if "authorization" in error_type or "unauthorized" in error_str or "401" in error_str:
+                raise AuthenticationError(f"Authentication failed: {e}") from e
+            # All other exceptions become connection errors
             raise ConnectionError(f"Failed to connect to CalDAV server: {e}") from e
 
     def _find_calendar(self, calendars: list, calendar_name: str) -> caldav.Calendar | None:

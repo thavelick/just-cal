@@ -1,8 +1,9 @@
 """Event model for calendar events."""
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 from icalendar import Calendar
 from icalendar import Event as ICalEvent
@@ -20,6 +21,7 @@ class Event:
     location: str | None = None
     recurrence: str | None = None  # RRULE string
     all_day: bool = False
+    _caldav_object: Any = field(default=None, init=False, repr=False)
 
     def to_ical(self) -> str:
         """Convert to iCalendar format using icalendar library.

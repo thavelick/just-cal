@@ -1,29 +1,24 @@
-"""Test script to verify CalDAV connection."""
+"""Test script to verify CalDAV connection.
+
+This script uses the configuration from ~/.config/justcal/config.toml
+Run 'justcal config --init' first to set up credentials.
+"""
 
 import sys
-sys.path.insert(0, 'src')
+
+sys.path.insert(0, "src")
 
 from just_cal.config import Config
 from just_cal.caldav_client import CalDAVClient
 
-# Create a test configuration with dev credentials
+# Load configuration from ~/.config/justcal/config.toml
 config = Config()
-config.data = {
-    "caldav": {
-        "url": "https://nextcloud.tristanhavelick.com/remote.php/dav",
-        "username": "claude",
-        "password": "super-dooper,fun-pw-time",
-        "calendar": "Personal",
-    },
-    "preferences": {
-        "default_duration": 60,
-        "timezone": "America/New_York",
-        "date_format": "%Y-%m-%d %H:%M",
-    },
-    "security": {
-        "use_keyring": False,  # Use password from config for testing
-    },
-}
+try:
+    config.load()
+except Exception as e:
+    print(f"✗ Failed to load configuration: {e}")
+    print("Run 'justcal config --init' to set up credentials")
+    sys.exit(1)
 
 print("Testing CalDAV connection...")
 print(f"URL: {config.get('caldav', 'url')}")

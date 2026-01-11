@@ -387,12 +387,14 @@ Map common patterns to RRULE:
 
 ### Temporary Development Credentials
 
-For development and testing, use these temporary credentials:
+For development and testing, temporary credentials have been configured:
 - **Username:** `claude`
-- **Password:** `super-dooper,fun-pw-time`
+- **Password:** `***********` (stored in `~/.config/justcal/config.toml`)
 - **URL:** `https://nextcloud.tristanhavelick.com/remote.php/dav`
 
 These credentials are specifically created for development. Feel free to create/delete test events as needed.
+
+**Note:** The actual password is stored in the local config file at `~/.config/justcal/config.toml` and is not committed to the repository.
 
 ## Testing Strategy
 
