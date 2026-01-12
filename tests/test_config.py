@@ -9,33 +9,6 @@ from just_cal.config import Config
 from just_cal.exceptions import ConfigurationError
 
 
-@pytest.fixture
-def temp_config_file(tmp_path):
-    """Create a temporary config file path."""
-    return tmp_path / "config.toml"
-
-
-@pytest.fixture
-def sample_config_data():
-    """Sample configuration data."""
-    return {
-        "caldav": {
-            "url": "https://example.com/dav",
-            "username": "testuser",
-            "password": "",
-            "calendar": "Personal",
-        },
-        "preferences": {
-            "default_duration": 60,
-            "timezone": "America/New_York",
-            "date_format": "%Y-%m-%d %H:%M",
-        },
-        "security": {
-            "use_keyring": True,
-        },
-    }
-
-
 def test_config_initialization():
     """Test Config initialization with default path."""
     config = Config()

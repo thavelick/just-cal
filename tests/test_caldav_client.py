@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from just_cal.caldav_client import CalDAVClient
-from just_cal.config import Config
 from just_cal.event import Event
 from just_cal.exceptions import (
     AuthenticationError,
@@ -14,19 +13,6 @@ from just_cal.exceptions import (
     EventNotFoundError,
     JustCalError,
 )
-
-
-@pytest.fixture
-def mock_config():
-    """Create a mock configuration."""
-    config = Mock(spec=Config)
-    config.get.side_effect = lambda section, key, default=None: {
-        ("caldav", "url"): "https://example.com/dav",
-        ("caldav", "username"): "testuser",
-        ("caldav", "calendar"): "Personal",
-    }.get((section, key), default)
-    config.get_password.return_value = "testpass"
-    return config
 
 
 @pytest.fixture
