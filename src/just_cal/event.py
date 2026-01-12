@@ -36,8 +36,14 @@ class Event:
         event = ICalEvent()
         event.add("uid", self.uid)
         event.add("summary", self.title)
-        event.add("dtstart", self.start)
-        event.add("dtend", self.end)
+
+        # For all-day events, use date objects instead of datetime
+        if self.all_day:
+            event.add("dtstart", self.start.date())
+            event.add("dtend", self.end.date())
+        else:
+            event.add("dtstart", self.start)
+            event.add("dtend", self.end)
 
         if self.description:
             event.add("description", self.description)

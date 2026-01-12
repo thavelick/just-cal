@@ -105,8 +105,15 @@ def _print_table(events: list) -> None:
     for event in events:
         uid = event.uid[:uid_width] if len(event.uid) > uid_width else event.uid
         title = event.title[:title_width] if len(event.title) > title_width else event.title
-        start_str = event.start.strftime("%Y-%m-%d %H:%M")
-        end_str = event.end.strftime("%Y-%m-%d %H:%M")
+
+        # Format dates - show only date for all-day events, date + time for timed events
+        if event.all_day:
+            start_str = event.start.strftime("%Y-%m-%d")
+            end_str = event.end.strftime("%Y-%m-%d")
+        else:
+            start_str = event.start.strftime("%Y-%m-%d %H:%M")
+            end_str = event.end.strftime("%Y-%m-%d %H:%M")
+
         location = (event.location or "")[:20]
 
         print(
