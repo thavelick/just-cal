@@ -252,6 +252,124 @@ END:VCALENDAR"""
     assert events[1].title == "Event 2"
 
 
+def test_list_events_chronological_order(client):
+    """Test that list_events returns events in chronological order."""
+    client.calendar = Mock()
+
+    # Create mock events in non-chronological order
+    # Event 3: Jan 17
+    mock_cal_event3 = Mock()
+    mock_cal_event3.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:event-3
+SUMMARY:Event 3
+DTSTART:20260117T140000Z
+DTEND:20260117T150000Z
+END:VEVENT
+END:VCALENDAR"""
+
+    # Event 1: Jan 15 (earliest)
+    mock_cal_event1 = Mock()
+    mock_cal_event1.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:event-1
+SUMMARY:Event 1
+DTSTART:20260115T140000Z
+DTEND:20260115T150000Z
+END:VEVENT
+END:VCALENDAR"""
+
+    # Event 2: Jan 16
+    mock_cal_event2 = Mock()
+    mock_cal_event2.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:event-2
+SUMMARY:Event 2
+DTSTART:20260116T140000Z
+DTEND:20260116T150000Z
+END:VEVENT
+END:VCALENDAR"""
+
+    # Return events in non-chronological order
+    client.calendar.search.return_value = [mock_cal_event3, mock_cal_event1, mock_cal_event2]
+
+    start = datetime(2026, 1, 1, tzinfo=UTC)
+    end = datetime(2026, 1, 31, tzinfo=UTC)
+
+    events = client.list_events(start, end)
+
+    # Verify events are sorted chronologically
+    assert len(events) == 3
+    assert events[0].uid == "event-1"  # Jan 15 (earliest)
+    assert events[1].uid == "event-2"  # Jan 16
+    assert events[2].uid == "event-3"  # Jan 17 (latest)
+
+
+def test_list_events_mixed_timezones(client):
+    """Test that list_events handles mix of timezone-aware and naive datetimes."""
+    client.calendar = Mock()
+
+    # Create mock events with different timezone configurations
+    # Event 1: All-day event (naive datetime after parsing)
+    mock_cal_event1 = Mock()
+    mock_cal_event1.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:event-1
+SUMMARY:All Day Event
+DTSTART;VALUE=DATE:20260115
+DTEND;VALUE=DATE:20260116
+END:VEVENT
+END:VCALENDAR"""
+
+    # Event 2: Timed event with timezone (aware datetime)
+    mock_cal_event2 = Mock()
+    mock_cal_event2.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:event-2
+SUMMARY:Timed Event
+DTSTART:20260116T140000Z
+DTEND:20260116T150000Z
+END:VEVENT
+END:VCALENDAR"""
+
+    # Event 3: Another all-day event (naive datetime after parsing)
+    mock_cal_event3 = Mock()
+    mock_cal_event3.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:event-3
+SUMMARY:Another All Day
+DTSTART;VALUE=DATE:20260117
+DTEND;VALUE=DATE:20260118
+END:VEVENT
+END:VCALENDAR"""
+
+    client.calendar.search.return_value = [mock_cal_event2, mock_cal_event3, mock_cal_event1]
+
+    start = datetime(2026, 1, 1, tzinfo=UTC)
+    end = datetime(2026, 1, 31, tzinfo=UTC)
+
+    # Should not raise an error about comparing naive and aware datetimes
+    events = client.list_events(start, end)
+
+    # Verify events are sorted chronologically
+    assert len(events) == 3
+    assert events[0].uid == "event-1"  # Jan 15 all-day
+    assert events[1].uid == "event-2"  # Jan 16 timed
+    assert events[2].uid == "event-3"  # Jan 17 all-day
+
+
 def test_list_events_parse_error(client, capsys):
     """Test listing events when some events fail to parse."""
     client.calendar = Mock()

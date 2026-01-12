@@ -1,6 +1,6 @@
 """CalDAV client for interacting with Nextcloud calendars."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import caldav
 
@@ -142,7 +142,15 @@ class CalDAVClient:
                     print(f"Warning: Failed to parse event: {e}")
                     continue
 
-            return result
+            # Sort events chronologically by start time
+            # Handle both timezone-aware and naive datetimes
+            def sort_key(event: Event) -> datetime:
+                """Get sortable datetime, treating naive datetimes as UTC."""
+                if event.start.tzinfo is None:
+                    return event.start.replace(tzinfo=UTC)
+                return event.start
+
+            return sorted(result, key=sort_key)
         except Exception as e:
             raise ConnectionError(f"Failed to list events: {e}") from e
 
