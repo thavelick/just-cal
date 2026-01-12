@@ -43,8 +43,10 @@ class TestHandleListCommand:
         mock_client.connect.assert_called_once()
         mock_client.list_events.assert_called_once()
 
-        # Check output
+        # Check output includes UID column, event title, and total
         captured = capsys.readouterr()
+        assert "UID" in captured.out
+        assert "test-uid" in captured.out
         assert "Test Event" in captured.out
         assert "Total: 1 event(s)" in captured.out
 

@@ -53,8 +53,10 @@ class TestHandleSearchCommand:
 
         handle_search_command(args)
 
-        # Check output contains only matching event
+        # Check output contains UID column and only matching event
         captured = capsys.readouterr()
+        assert "UID" in captured.out
+        assert "test-1" in captured.out
         assert "Team Meeting" in captured.out
         assert "Lunch Break" not in captured.out
         assert "Total: 1 event(s)" in captured.out

@@ -8,7 +8,12 @@ import pytest
 from just_cal.caldav_client import CalDAVClient
 from just_cal.config import Config
 from just_cal.event import Event
-from just_cal.exceptions import AuthenticationError, ConnectionError, EventNotFoundError
+from just_cal.exceptions import (
+    AuthenticationError,
+    ConnectionError,
+    EventNotFoundError,
+    JustCalError,
+)
 
 
 @pytest.fixture
@@ -59,9 +64,7 @@ def test_connect_success(mock_caldav, client, mock_config):
     assert client.client == mock_dav_client
     assert client.calendar == mock_calendar
     mock_caldav.DAVClient.assert_called_once_with(
-        url="https://example.com/dav",
-        username="testuser",
-        password="testpass"
+        url="https://example.com/dav", username="testuser", password="testpass"
     )
 
 
@@ -102,6 +105,7 @@ def test_connect_auth_error(mock_caldav, client):
 @patch("just_cal.caldav_client.caldav")
 def test_connect_no_calendars(mock_caldav, client):
     """Test connection when no calendars found."""
+
     # Create a proper exception class for AuthorizationError
     class AuthorizationError(Exception):
         pass
@@ -122,6 +126,7 @@ def test_connect_no_calendars(mock_caldav, client):
 @patch("just_cal.caldav_client.caldav")
 def test_connect_calendar_not_found(mock_caldav, client):
     """Test connection when specified calendar is not found."""
+
     # Create a proper exception class for AuthorizationError
     class AuthorizationError(Exception):
         pass
@@ -420,6 +425,89 @@ END:VCALENDAR"""
         client.get_event_by_uid("target-uid")
 
 
+def test_get_event_by_partial_uid_single_match(client):
+    """Test getting event by partial UID with single match."""
+    client.calendar = Mock()
+
+    mock_cal_event = Mock()
+    mock_cal_event.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:abc123def456
+SUMMARY:Test Event
+DTSTART:20260115T140000Z
+DTEND:20260115T150000Z
+END:VEVENT
+END:VCALENDAR"""
+
+    client.calendar.events.return_value = [mock_cal_event]
+
+    # Should find event with partial UID
+    event = client.get_event_by_uid("abc123")
+
+    assert event.uid == "abc123def456"
+    assert event.title == "Test Event"
+
+
+def test_get_event_by_partial_uid_multiple_matches(client):
+    """Test getting event by partial UID with multiple matches."""
+    client.calendar = Mock()
+
+    mock_cal_event1 = Mock()
+    mock_cal_event1.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:abc123def456
+SUMMARY:Event 1
+DTSTART:20260115T140000Z
+DTEND:20260115T150000Z
+END:VEVENT
+END:VCALENDAR"""
+
+    mock_cal_event2 = Mock()
+    mock_cal_event2.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:abc123xyz789
+SUMMARY:Event 2
+DTSTART:20260116T140000Z
+DTEND:20260116T150000Z
+END:VEVENT
+END:VCALENDAR"""
+
+    client.calendar.events.return_value = [mock_cal_event1, mock_cal_event2]
+
+    # Should raise error for ambiguous partial UID
+    with pytest.raises(JustCalError, match="Partial UID 'abc123' matches multiple events"):
+        client.get_event_by_uid("abc123")
+
+
+def test_get_event_by_partial_uid_no_match(client):
+    """Test getting event by partial UID with no matches."""
+    client.calendar = Mock()
+
+    mock_cal_event = Mock()
+    mock_cal_event.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:xyz789
+SUMMARY:Other Event
+DTSTART:20260115T140000Z
+DTEND:20260115T150000Z
+END:VEVENT
+END:VCALENDAR"""
+
+    client.calendar.events.return_value = [mock_cal_event]
+
+    # Should not find event with non-matching partial UID
+    with pytest.raises(EventNotFoundError, match="Event with UID 'abc123' not found"):
+        client.get_event_by_uid("abc123")
+
+
 def test_update_event_not_connected(client):
     """Test updating event when not connected."""
     event = Event(
@@ -521,6 +609,34 @@ def test_delete_event_no_caldav_object(mock_get_event, client):
 
     with pytest.raises(ConnectionError, match="Event object doesn't have CalDAV reference"):
         client.delete_event("test-uid")
+
+
+def test_delete_event_with_partial_uid(client):
+    """Test deleting event using partial UID."""
+    client.calendar = Mock()
+
+    # Create mock event with long UID
+    mock_cal_event = Mock()
+    mock_cal_event.data = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//test//test//EN
+BEGIN:VEVENT
+UID:abc123def456ghi789
+SUMMARY:Test Event
+DTSTART:20260115T140000Z
+DTEND:20260115T150000Z
+END:VEVENT
+END:VCALENDAR"""
+
+    mock_cal_event.delete = Mock()
+
+    client.calendar.events.return_value = [mock_cal_event]
+
+    # Should successfully delete using partial UID
+    client.delete_event("abc123")
+
+    # Verify delete was called
+    mock_cal_event.delete.assert_called_once()
 
 
 @patch.object(CalDAVClient, "connect")

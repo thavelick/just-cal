@@ -93,17 +93,25 @@ def _print_table(events: list) -> None:
     title_width = max(title_width, 5)  # Minimum width for "TITLE" header
     title_width = min(title_width, 40)  # Maximum width to avoid super wide tables
 
+    uid_width = 12  # Show first 12 characters of UID
+
     # Print header
-    print(f"{'TITLE':<{title_width}} {'START':<20} {'END':<20} {'LOCATION':<20}")
-    print("-" * (title_width + 63))
+    print(
+        f"{'UID':<{uid_width}} {'TITLE':<{title_width}} {'START':<20} {'END':<20} {'LOCATION':<20}"
+    )
+    print("-" * (uid_width + title_width + 65))
 
     # Print events
     for event in events:
+        uid = event.uid[:uid_width] if len(event.uid) > uid_width else event.uid
         title = event.title[:title_width] if len(event.title) > title_width else event.title
         start_str = event.start.strftime("%Y-%m-%d %H:%M")
         end_str = event.end.strftime("%Y-%m-%d %H:%M")
         location = (event.location or "")[:20]
 
-        print(f"{title:<{title_width}} {start_str:<20} {end_str:<20} {location:<20}")
+        print(
+            f"{uid:<{uid_width}} {title:<{title_width}} {start_str:<20} "
+            f"{end_str:<20} {location:<20}"
+        )
 
     print(f"\nTotal: {len(events)} event(s)")

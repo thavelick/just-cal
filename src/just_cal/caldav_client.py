@@ -6,7 +6,7 @@ import caldav
 
 from .config import Config
 from .event import Event
-from .exceptions import AuthenticationError, ConnectionError, EventNotFoundError
+from .exceptions import AuthenticationError, ConnectionError, EventNotFoundError, JustCalError
 
 
 class CalDAVClient:
@@ -201,16 +201,20 @@ class CalDAVClient:
             raise ConnectionError(f"Failed to search events: {e}") from e
 
     def get_event_by_uid(self, uid: str) -> Event:
-        """Get event by UID.
+        """Get event by UID or partial UID.
+
+        Supports both exact UID matches and partial UID prefixes (like git short hashes).
+        If multiple events match the prefix, raises an error asking for more specificity.
 
         Args:
-            uid: Event UID
+            uid: Event UID or UID prefix (minimum 8 characters for partial match)
 
         Returns:
             Event object
 
         Raises:
             EventNotFoundError: If event not found
+            JustCalError: If partial UID matches multiple events
             ConnectionError: If operation fails
         """
         if not self.calendar:
@@ -219,16 +223,42 @@ class CalDAVClient:
         try:
             # CalDAV doesn't have a direct get-by-UID method, so we search
             events = self.calendar.events()
+            exact_match = None
+            partial_matches = []
+
             for cal_event in events:
                 ical_data = cal_event.data
                 event = Event.from_ical(ical_data)
-                if event.uid == uid:
-                    # Store the CalDAV object for later use
-                    event._caldav_object = cal_event
-                    return event
 
-            raise EventNotFoundError(f"Event with UID '{uid}' not found")
-        except EventNotFoundError:
+                # Check for exact match first
+                if event.uid == uid:
+                    event._caldav_object = cal_event
+                    exact_match = event
+                    break
+
+                # Check for partial match (UID starts with provided string)
+                if event.uid.startswith(uid):
+                    event._caldav_object = cal_event
+                    partial_matches.append(event)
+
+            # Return exact match if found
+            if exact_match:
+                return exact_match
+
+            # Handle partial matches
+            if len(partial_matches) == 0:
+                raise EventNotFoundError(f"Event with UID '{uid}' not found")
+            if len(partial_matches) == 1:
+                return partial_matches[0]
+
+            # Multiple partial matches - ask user to be more specific
+            matching_uids = [e.uid for e in partial_matches]
+            raise JustCalError(
+                f"Partial UID '{uid}' matches multiple events: {', '.join(matching_uids[:5])}. "
+                f"Please provide more characters."
+            )
+
+        except (EventNotFoundError, JustCalError):
             raise
         except Exception as e:
             raise ConnectionError(f"Failed to get event: {e}") from e
