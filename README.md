@@ -4,20 +4,18 @@ A Python CLI utility for managing Nextcloud calendars via CalDAV.
 
 ## Current Status
 
-**Phase 6 Complete** - Core calendar operations are fully implemented. All basic event management features are working.
+**Phase 7 Complete** - Full calendar management with recurring events support.
 
 ### Working Features
 - ✅ Configuration management (`justcal config`)
 - ✅ CalDAV connection testing
 - ✅ Secure password storage (system keyring)
 - ✅ Add events with natural language dates (`justcal add`)
+- ✅ Recurring events with flexible patterns
 - ✅ List events in date ranges (`justcal list`)
 - ✅ Search events by keyword (`justcal search`)
 - ✅ Edit existing events (`justcal edit`)
 - ✅ Delete events (`justcal delete`)
-
-### Coming Soon
-- 🚧 Recurring events support (Phase 7)
 
 ## Installation
 
@@ -137,7 +135,49 @@ justcal add -t "Birthday" -s "2026-01-15" --all-day
 - `-e, --end DATETIME` - End date/time (optional, defaults to start + 1 hour)
 - `-d, --description TEXT` - Event description
 - `-l, --location TEXT` - Event location
+- `-r, --recur PATTERN` - Recurrence pattern (see below)
 - `--all-day` - Create all-day event
+
+##### Recurring Events
+
+Create recurring events using natural language patterns or RRULE syntax:
+
+```bash
+# Simple patterns
+justcal add -t "Daily Standup" -s "tomorrow at 9am" -r "daily"
+justcal add -t "Weekly Review" -s "next Monday at 2pm" -r "weekly"
+justcal add -t "Monthly Report" -s "2026-02-01 10:00" -r "monthly"
+
+# Specific days
+justcal add -t "Team Meeting" -s "next Monday at 3pm" -r "weekly on Monday"
+justcal add -t "Lunch" -s "tomorrow at 12pm" -r "weekdays"
+justcal add -t "Hiking" -s "next Saturday at 8am" -r "weekends"
+
+# Multiple days
+justcal add -t "Office Hours" -s "tomorrow at 2pm" -r "weekly on Monday and Wednesday"
+
+# Monthly patterns
+justcal add -t "Board Meeting" -s "2026-02-15 10:00" -r "monthly on the 15th"
+justcal add -t "Team Lunch" -s "2026-02-05 12:00" -r "monthly on the first Friday"
+
+# Every N days/weeks/months
+justcal add -t "Bi-weekly Sync" -s "next Monday at 10am" -r "every 2 weeks"
+justcal add -t "Quarterly Review" -s "2026-02-01 14:00" -r "every 3 months"
+
+# Advanced RRULE syntax (for power users)
+justcal add -t "Complex Pattern" -s "tomorrow at 9am" -r "FREQ=DAILY;COUNT=10;INTERVAL=2"
+justcal add -t "Work Week Standup" -s "next Monday at 9am" -r "FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR"
+```
+
+**Supported recurrence patterns:**
+- Simple: `daily`, `weekly`, `monthly`, `yearly`
+- Weekday patterns: `weekdays` (Mon-Fri), `weekends` (Sat-Sun)
+- Specific days: `weekly on <day>` (e.g., "weekly on Monday")
+- Multiple days: `weekly on <day> and <day>` (e.g., "weekly on Monday and Wednesday")
+- Monthly: `monthly on the <ordinal> <day>` (e.g., "monthly on the first Friday")
+- Monthly date: `monthly on the <day>th` (e.g., "monthly on the 15th")
+- Intervals: `every <n> days/weeks/months` (e.g., "every 2 weeks")
+- Raw RRULE: Any valid iCalendar RRULE string (e.g., "FREQ=DAILY;COUNT=10")
 
 #### List Events
 
@@ -283,8 +323,8 @@ bd show jc-123
 - ✅ **Phase 4**: Add command (basic events)
 - ✅ **Phase 5**: List and search commands
 - ✅ **Phase 6**: Edit and delete commands
-- 🚧 **Phase 7**: Recurring events support
-- **Phase 8**: Polish and documentation
+- ✅ **Phase 7**: Recurring events support
+- 🚧 **Phase 8**: Polish and documentation
 
 ## Contributing
 
