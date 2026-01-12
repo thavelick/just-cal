@@ -4,20 +4,20 @@ A Python CLI utility for managing Nextcloud calendars via CalDAV.
 
 ## Current Status
 
-**Phase 2 Complete** - Core infrastructure is implemented and tested. Configuration management and CalDAV connectivity are fully functional.
+**Phase 6 Complete** - Core calendar operations are fully implemented. All basic event management features are working.
 
 ### Working Features
 - ✅ Configuration management (`justcal config`)
 - ✅ CalDAV connection testing
 - ✅ Secure password storage (system keyring)
+- ✅ Add events with natural language dates (`justcal add`)
+- ✅ List events in date ranges (`justcal list`)
+- ✅ Search events by keyword (`justcal search`)
+- ✅ Edit existing events (`justcal edit`)
+- ✅ Delete events (`justcal delete`)
 
 ### Coming Soon
-- 🚧 Add events (`justcal add`)
-- 🚧 List events (`justcal list`)
-- 🚧 Search events (`justcal search`)
-- 🚧 Edit events (`justcal edit`)
-- 🚧 Delete events (`justcal delete`)
-- 🚧 Recurring events support
+- 🚧 Recurring events support (Phase 7)
 
 ## Installation
 
@@ -114,6 +114,117 @@ justcal config --init
 
 Run the interactive setup again to reconfigure from scratch.
 
+### Calendar Commands
+
+#### Add Events
+
+Create new calendar events with natural language date parsing:
+
+```bash
+# Basic event with natural language dates
+justcal add -t "Team Meeting" -s "tomorrow at 2pm" -e "tomorrow at 3pm"
+
+# Event with location and description
+justcal add -t "Dentist" -s "2026-01-20 10:00" -l "123 Main St" -d "Annual checkup"
+
+# All-day event
+justcal add -t "Birthday" -s "2026-01-15" --all-day
+```
+
+**Options:**
+- `-t, --title TEXT` - Event title (required)
+- `-s, --start DATETIME` - Start date/time (required, supports natural language)
+- `-e, --end DATETIME` - End date/time (optional, defaults to start + 1 hour)
+- `-d, --description TEXT` - Event description
+- `-l, --location TEXT` - Event location
+- `--all-day` - Create all-day event
+
+#### List Events
+
+View events in a date range:
+
+```bash
+# List next 7 days (default)
+justcal list
+
+# List specific date range
+justcal list --from today --to "next month"
+
+# JSON output
+justcal list --format json
+
+# Limit results
+justcal list -n 10
+```
+
+**Options:**
+- `--from DATETIME` - Start of range (default: today)
+- `--to DATETIME` - End of range (default: 7 days from now)
+- `--format {table,json}` - Output format (default: table)
+- `-n, --limit INTEGER` - Limit number of results
+
+#### Search Events
+
+Search for events by keyword:
+
+```bash
+# Search all fields
+justcal search "meeting"
+
+# Search specific field
+justcal search "dentist" --field location
+
+# Search with date range
+justcal search "standup" --from "last week"
+```
+
+**Options:**
+- `--field {title,description,location,all}` - Search field (default: all)
+- `--from DATETIME` - Start of date range
+- `--to DATETIME` - End of date range
+- `--format {table,json}` - Output format
+
+#### Edit Events
+
+Update existing events:
+
+```bash
+# Update title
+justcal edit EVENT_ID -t "Updated Meeting"
+
+# Update start time
+justcal edit EVENT_ID -s "tomorrow at 3pm"
+
+# Update multiple fields
+justcal edit EVENT_ID -t "New Title" -l "New Location" -d "New description"
+```
+
+**Options:**
+- `-t, --title TEXT` - New title
+- `-s, --start DATETIME` - New start time
+- `-e, --end DATETIME` - New end time
+- `-d, --description TEXT` - New description
+- `-l, --location TEXT` - New location
+
+**Note:** EVENT_ID can be obtained from `list` or `search` commands.
+
+#### Delete Events
+
+Remove events from your calendar:
+
+```bash
+# Delete with confirmation
+justcal delete EVENT_ID
+
+# Skip confirmation prompt
+justcal delete EVENT_ID -y
+```
+
+**Options:**
+- `-y, --yes` - Skip confirmation prompt
+
+**Note:** EVENT_ID can be obtained from `list` or `search` commands.
+
 ## Development
 
 ### Running Tests
@@ -166,11 +277,13 @@ bd show jc-123
 
 ## Roadmap
 
-- **Phase 3**: Date/time utilities with natural language parsing
-- **Phase 4**: Add command (basic events)
-- **Phase 5**: List and search commands
-- **Phase 6**: Edit and delete commands
-- **Phase 7**: Recurring events support
+- ✅ **Phase 1**: Project setup
+- ✅ **Phase 2**: Core infrastructure (config, CalDAV client, event model)
+- ✅ **Phase 3**: Date/time utilities with natural language parsing
+- ✅ **Phase 4**: Add command (basic events)
+- ✅ **Phase 5**: List and search commands
+- ✅ **Phase 6**: Edit and delete commands
+- 🚧 **Phase 7**: Recurring events support
 - **Phase 8**: Polish and documentation
 
 ## Contributing
