@@ -73,3 +73,50 @@ class TestRecurrenceParser:
         assert RecurrenceParser.parse("DAILY") == "FREQ=DAILY"
         assert RecurrenceParser.parse("Weekly") == "FREQ=WEEKLY"
         assert RecurrenceParser.parse("WEEKLY ON MONDAY") == "FREQ=WEEKLY;BYDAY=MO"
+
+    def test_parse_weekly_on_multiple_days(self):
+        """Test parsing 'weekly on <day> and <day>' patterns."""
+        assert RecurrenceParser.parse("weekly on Sundays and Tuesdays") == "FREQ=WEEKLY;BYDAY=SU,TU"
+        assert RecurrenceParser.parse("weekly on Monday and Friday") == "FREQ=WEEKLY;BYDAY=MO,FR"
+        assert (
+            RecurrenceParser.parse("weekly on Wednesdays and Saturdays")
+            == "FREQ=WEEKLY;BYDAY=WE,SA"
+        )
+
+    def test_parse_monthly_on_nth_weekday(self):
+        """Test parsing 'monthly on the Nth weekday' patterns."""
+        assert (
+            RecurrenceParser.parse("monthly on the 1st Monday")
+            == "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1"
+        )
+        assert (
+            RecurrenceParser.parse("monthly on the 2nd Tuesday")
+            == "FREQ=MONTHLY;BYDAY=TU;BYSETPOS=2"
+        )
+        assert (
+            RecurrenceParser.parse("monthly on the 3rd Wednesday")
+            == "FREQ=MONTHLY;BYDAY=WE;BYSETPOS=3"
+        )
+        assert (
+            RecurrenceParser.parse("monthly on the 4th Thursday")
+            == "FREQ=MONTHLY;BYDAY=TH;BYSETPOS=4"
+        )
+        assert (
+            RecurrenceParser.parse("monthly on the last Friday")
+            == "FREQ=MONTHLY;BYDAY=FR;BYSETPOS=-1"
+        )
+
+    def test_parse_monthly_on_nth_weekday_text(self):
+        """Test parsing 'monthly on the Nth weekday' with text ordinals."""
+        assert (
+            RecurrenceParser.parse("monthly on the first Monday")
+            == "FREQ=MONTHLY;BYDAY=MO;BYSETPOS=1"
+        )
+        assert (
+            RecurrenceParser.parse("monthly on the second Tuesday")
+            == "FREQ=MONTHLY;BYDAY=TU;BYSETPOS=2"
+        )
+        assert (
+            RecurrenceParser.parse("monthly on the third Wednesday")
+            == "FREQ=MONTHLY;BYDAY=WE;BYSETPOS=3"
+        )
