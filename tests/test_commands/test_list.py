@@ -43,11 +43,12 @@ class TestHandleListCommand:
         mock_client.connect.assert_called_once()
         mock_client.list_events.assert_called_once()
 
-        # Check output includes UID column, event title, and total
+        # Check output includes UID column, event title, day of week, and total
         captured = capsys.readouterr()
         assert "UID" in captured.out
         assert "test-uid" in captured.out
         assert "Test Event" in captured.out
+        assert "Tue," in captured.out  # 2026-01-20 is a Tuesday
         assert "Total: 1 event(s)" in captured.out
 
     @patch("just_cal.commands.list.CalDAVClient")

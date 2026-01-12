@@ -97,9 +97,9 @@ def _print_table(events: list) -> None:
 
     # Print header
     print(
-        f"{'UID':<{uid_width}} {'TITLE':<{title_width}} {'START':<20} {'END':<20} {'LOCATION':<20}"
+        f"{'UID':<{uid_width}} {'TITLE':<{title_width}} {'START':<25} {'END':<25} {'LOCATION':<20}"
     )
-    print("-" * (uid_width + title_width + 65))
+    print("-" * (uid_width + title_width + 75))
 
     # Print events
     for event in events:
@@ -108,17 +108,17 @@ def _print_table(events: list) -> None:
 
         # Format dates - show only date for all-day events, date + time for timed events
         if event.all_day:
-            start_str = event.start.strftime("%Y-%m-%d")
-            end_str = event.end.strftime("%Y-%m-%d")
+            start_str = event.start.strftime("%a, %Y-%m-%d")
+            end_str = event.end.strftime("%a, %Y-%m-%d")
         else:
-            start_str = event.start.strftime("%Y-%m-%d %I:%M %p")
-            end_str = event.end.strftime("%Y-%m-%d %I:%M %p")
+            start_str = event.start.strftime("%a, %Y-%m-%d %I:%M %p")
+            end_str = event.end.strftime("%a, %Y-%m-%d %I:%M %p")
 
         location = (event.location or "")[:20]
 
         print(
-            f"{uid:<{uid_width}} {title:<{title_width}} {start_str:<20} "
-            f"{end_str:<20} {location:<20}"
+            f"{uid:<{uid_width}} {title:<{title_width}} {start_str:<25} "
+            f"{end_str:<25} {location:<20}"
         )
 
     print(f"\nTotal: {len(events)} event(s)")
