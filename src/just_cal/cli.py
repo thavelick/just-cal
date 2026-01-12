@@ -67,6 +67,20 @@ def main() -> NoReturn:
         help="Output format (default: table)",
     )
 
+    # Edit subcommand
+    edit_parser = subparsers.add_parser("edit", help="Edit an existing event")
+    edit_parser.add_argument("event_id", help="Event UID to edit")
+    edit_parser.add_argument("-t", "--title", help="New title")
+    edit_parser.add_argument("-s", "--start", help="New start date/time")
+    edit_parser.add_argument("-e", "--end", help="New end date/time")
+    edit_parser.add_argument("-d", "--description", help="New description")
+    edit_parser.add_argument("-l", "--location", help="New location")
+
+    # Delete subcommand
+    delete_parser = subparsers.add_parser("delete", help="Delete an event")
+    delete_parser.add_argument("event_id", help="Event UID to delete")
+    delete_parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation prompt")
+
     # Config subcommand
     config_parser = subparsers.add_parser("config", help="Manage configuration")
     config_group = config_parser.add_mutually_exclusive_group(required=True)
@@ -98,6 +112,14 @@ def main() -> NoReturn:
             from just_cal.commands.search import handle_search_command
 
             handle_search_command(args)
+        elif args.command == "edit":
+            from just_cal.commands.edit import handle_edit_command
+
+            handle_edit_command(args)
+        elif args.command == "delete":
+            from just_cal.commands.delete import handle_delete_command
+
+            handle_delete_command(args)
         elif args.command == "config":
             handle_config_command(args)
         else:
