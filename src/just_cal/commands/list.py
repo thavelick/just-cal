@@ -82,6 +82,40 @@ def _print_json(events: list) -> None:
     print(json.dumps(events_data, indent=2))
 
 
+def _format_when_column(event) -> str:
+    """Format the WHEN column for an event.
+
+    Args:
+        event: Event object with start, end, and all_day attributes
+
+    Returns:
+        Formatted string showing when the event occurs:
+        - All-day events: "Sat, 2026-01-10 - Mon, 2026-01-12"
+        - Same-day timed events: "Sun, 2026-01-11 07:00 PM - 08:00 PM"
+        - Multi-day timed events: "Sat, 2026-01-10 7:00 PM - Mon, 2026-01-12 9:00 AM"
+    """
+    if event.all_day:
+        # All-day events: show date range
+        start_str = event.start.strftime("%a, %Y-%m-%d")
+        end_str = event.end.strftime("%a, %Y-%m-%d")
+        return f"{start_str} - {end_str}"
+
+    # Timed events: check if same day
+    same_day = event.start.date() == event.end.date()
+
+    if same_day:
+        # Same-day: show date once, then time range
+        date_str = event.start.strftime("%a, %Y-%m-%d")
+        start_time = event.start.strftime("%I:%M %p").lstrip("0")
+        end_time = event.end.strftime("%I:%M %p").lstrip("0")
+        return f"{date_str} {start_time} - {end_time}"
+    else:
+        # Multi-day: show full datetime for both
+        start_str = event.start.strftime("%a, %Y-%m-%d %I:%M %p").replace(" 0", " ")
+        end_str = event.end.strftime("%a, %Y-%m-%d %I:%M %p").replace(" 0", " ")
+        return f"{start_str} - {end_str}"
+
+
 def _print_table(events: list) -> None:
     """Print events in table format."""
     if not events:
@@ -95,30 +129,21 @@ def _print_table(events: list) -> None:
 
     uid_width = 12  # Show first 12 characters of UID
 
+    # Calculate WHEN column width based on actual formatted strings
+    when_width = max(len(_format_when_column(e)) for e in events) if events else 10
+    when_width = max(when_width, 4)  # Minimum width for "WHEN" header
+
     # Print header
-    print(
-        f"{'UID':<{uid_width}} {'TITLE':<{title_width}} {'START':<25} {'END':<25} {'LOCATION':<20}"
-    )
-    print("-" * (uid_width + title_width + 75))
+    print(f"{'UID':<{uid_width}} {'TITLE':<{title_width}} {'WHEN':<{when_width}} {'LOCATION':<20}")
+    print("-" * (uid_width + title_width + when_width + 35))
 
     # Print events
     for event in events:
         uid = event.uid[:uid_width] if len(event.uid) > uid_width else event.uid
         title = event.title[:title_width] if len(event.title) > title_width else event.title
-
-        # Format dates - show only date for all-day events, date + time for timed events
-        if event.all_day:
-            start_str = event.start.strftime("%a, %Y-%m-%d")
-            end_str = event.end.strftime("%a, %Y-%m-%d")
-        else:
-            start_str = event.start.strftime("%a, %Y-%m-%d %I:%M %p")
-            end_str = event.end.strftime("%a, %Y-%m-%d %I:%M %p")
-
+        when = _format_when_column(event)
         location = (event.location or "")[:20]
 
-        print(
-            f"{uid:<{uid_width}} {title:<{title_width}} {start_str:<25} "
-            f"{end_str:<25} {location:<20}"
-        )
+        print(f"{uid:<{uid_width}} {title:<{title_width}} {when:<{when_width}} {location:<20}")
 
     print(f"\nTotal: {len(events)} event(s)")

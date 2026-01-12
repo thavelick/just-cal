@@ -231,13 +231,61 @@ class TestHandleListCommand:
 
         handle_list_command(args)
 
-        # Check output uses 12-hour format with AM/PM
+        # Check output uses 12-hour format with AM/PM (leading zeros stripped)
         captured = capsys.readouterr()
-        assert "09:30 AM" in captured.out
+        assert "9:30 AM" in captured.out
         assert "10:30 AM" in captured.out
-        assert "02:00 PM" in captured.out
-        assert "03:00 PM" in captured.out
+        assert "2:00 PM" in captured.out
+        assert "3:00 PM" in captured.out
         # Ensure 24-hour format is NOT used
-        assert "09:30" not in captured.out.replace("09:30 AM", "")
         assert "14:00" not in captured.out
         assert "15:00" not in captured.out
+
+
+class TestFormatWhenColumn:
+    """Tests for _format_when_column function."""
+
+    def test_format_all_day_event(self):
+        """Test formatting for all-day events."""
+        from just_cal.commands.list import _format_when_column
+
+        event = Event(
+            uid="test-uid",
+            title="All Day Event",
+            start=datetime(2026, 1, 10, 0, 0, tzinfo=UTC),
+            end=datetime(2026, 1, 12, 0, 0, tzinfo=UTC),
+            all_day=True,
+        )
+
+        result = _format_when_column(event)
+        assert result == "Sat, 2026-01-10 - Mon, 2026-01-12"
+
+    def test_format_same_day_timed_event(self):
+        """Test formatting for same-day timed events."""
+        from just_cal.commands.list import _format_when_column
+
+        event = Event(
+            uid="test-uid",
+            title="Meeting",
+            start=datetime(2026, 1, 11, 19, 0, tzinfo=UTC),  # 7:00 PM
+            end=datetime(2026, 1, 11, 20, 0, tzinfo=UTC),  # 8:00 PM
+            all_day=False,
+        )
+
+        result = _format_when_column(event)
+        assert result == "Sun, 2026-01-11 7:00 PM - 8:00 PM"
+
+    def test_format_multi_day_timed_event(self):
+        """Test formatting for multi-day timed events."""
+        from just_cal.commands.list import _format_when_column
+
+        event = Event(
+            uid="test-uid",
+            title="Conference",
+            start=datetime(2026, 1, 10, 19, 0, tzinfo=UTC),  # 7:00 PM
+            end=datetime(2026, 1, 12, 9, 0, tzinfo=UTC),  # 9:00 AM
+            all_day=False,
+        )
+
+        result = _format_when_column(event)
+        assert result == "Sat, 2026-01-10 7:00 PM - Mon, 2026-01-12 9:00 AM"
