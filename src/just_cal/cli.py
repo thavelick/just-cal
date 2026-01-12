@@ -30,6 +30,11 @@ def main() -> NoReturn:
     add_parser.add_argument("-d", "--description", help="Event description")
     add_parser.add_argument("-l", "--location", help="Event location")
     add_parser.add_argument("--all-day", action="store_true", help="Create all-day event")
+    add_parser.add_argument(
+        "-r",
+        "--recur",
+        help='Recurrence pattern (e.g., "daily", "weekly on Monday", "FREQ=DAILY;COUNT=10")',
+    )
 
     # List subcommand
     list_parser = subparsers.add_parser("list", help="List events")

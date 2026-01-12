@@ -531,3 +531,73 @@ class TestEventCreationIntegration:
         assert len(event.uid) > 0
         # UUID format check (basic - should have hyphens)
         assert "-" in event.uid
+
+    @patch("just_cal.commands.add.CalDAVClient")
+    @patch("just_cal.commands.add.Config")
+    def test_event_with_recurrence(self, mock_config_class, mock_caldav_class):
+        """Test creating event with recurrence pattern."""
+        from just_cal.commands.add import handle_add_command
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.load = Mock()
+        mock_config.get.side_effect = lambda section, key, default=None: {
+            ("preferences", "timezone"): "America/New_York",
+            ("preferences", "default_duration"): 60,
+        }.get((section, key), default)
+        mock_config_class.return_value = mock_config
+
+        # Mock CalDAV client
+        mock_client = Mock()
+        mock_client.add_event.return_value = "recur-uid"
+        mock_caldav_class.return_value = mock_client
+
+        args = argparse.Namespace(
+            title="Daily Standup",
+            start="2026-01-20 09:00:00",
+            end="2026-01-20 09:15:00",
+            description=None,
+            location=None,
+            all_day=False,
+            recur="weekdays",
+        )
+
+        handle_add_command(args)
+
+        # Get the Event object passed to add_event
+        event = mock_client.add_event.call_args[0][0]
+
+        # Verify recurrence was set
+        assert event.recurrence == "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+
+    @patch("just_cal.commands.add.CalDAVClient")
+    @patch("just_cal.commands.add.Config")
+    def test_invalid_recurrence_pattern(self, mock_config_class, mock_caldav_class):
+        """Test that invalid recurrence pattern raises error."""
+        from just_cal.commands.add import handle_add_command
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.load = Mock()
+        mock_config.get.side_effect = lambda section, key, default=None: {
+            ("preferences", "timezone"): "America/New_York",
+            ("preferences", "default_duration"): 60,
+        }.get((section, key), default)
+        mock_config_class.return_value = mock_config
+
+        # Mock CalDAV client
+        mock_client = Mock()
+        mock_caldav_class.return_value = mock_client
+
+        args = argparse.Namespace(
+            title="Event",
+            start="2026-01-20 09:00:00",
+            end="2026-01-20 10:00:00",
+            description=None,
+            location=None,
+            all_day=False,
+            recur="invalid pattern",
+        )
+
+        with pytest.raises(JustCalError, match="Invalid recurrence pattern"):
+            handle_add_command(args)

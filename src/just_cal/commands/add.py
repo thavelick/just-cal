@@ -9,6 +9,7 @@ from just_cal.config import Config
 from just_cal.event import Event
 from just_cal.exceptions import JustCalError
 from just_cal.utils.date_parser import DateParser
+from just_cal.utils.recurrence_parser import RecurrenceParser
 from just_cal.utils.validators import validate_non_empty
 
 
@@ -23,6 +24,7 @@ def handle_add_command(args: argparse.Namespace) -> None:
             - description: Event description (optional)
             - location: Event location (optional)
             - all_day: Boolean flag for all-day events (optional)
+            - recur: Recurrence pattern (optional)
     """
     # Validate required fields
     validate_non_empty(args.title, "Title")
@@ -58,6 +60,13 @@ def handle_add_command(args: argparse.Namespace) -> None:
         default_duration = config.get("preferences", "default_duration", 60)
         end_dt = start_dt + timedelta(minutes=default_duration)
 
+    # Parse recurrence pattern if provided
+    recurrence = None
+    if hasattr(args, "recur") and args.recur:
+        recurrence = RecurrenceParser.parse(args.recur)
+        if not recurrence:
+            raise JustCalError(f"Invalid recurrence pattern: {args.recur}")
+
     # Create event
     event = Event(
         uid=str(uuid.uuid4()),
@@ -66,6 +75,7 @@ def handle_add_command(args: argparse.Namespace) -> None:
         end=end_dt,
         description=args.description,
         location=args.location,
+        recurrence=recurrence,
         all_day=is_all_day,
     )
 
@@ -80,3 +90,5 @@ def handle_add_command(args: argparse.Namespace) -> None:
     print(f"  End: {end_dt}")
     if is_all_day:
         print("  All-day event: Yes")
+    if recurrence:
+        print(f"  Recurrence: {recurrence}")
