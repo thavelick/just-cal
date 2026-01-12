@@ -331,3 +331,203 @@ class TestHandleAddCommand:
         event = mock_client.add_event.call_args[0][0]
         assert event.all_day is True
         assert event.end.date() == event.start.date()  # Same day
+
+
+class TestEventCreationIntegration:
+    """Tests for CalDAV integration in event creation."""
+
+    @patch("just_cal.commands.add.CalDAVClient")
+    @patch("just_cal.commands.add.Config")
+    def test_event_creation_calls_caldav_client(self, mock_config_class, mock_caldav_class):
+        """Test that event creation calls CalDAV client's add_event method."""
+        from just_cal.commands.add import handle_add_command
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.load = Mock()
+        mock_config.get.side_effect = lambda section, key, default=None: {
+            ("preferences", "timezone"): "America/New_York",
+            ("preferences", "default_duration"): 60,
+        }.get((section, key), default)
+        mock_config_class.return_value = mock_config
+
+        # Mock CalDAV client
+        mock_client = Mock()
+        mock_client.add_event.return_value = "test-uid-123"
+        mock_caldav_class.return_value = mock_client
+
+        args = argparse.Namespace(
+            title="Team Meeting",
+            start="2026-01-20 14:00:00",
+            end="2026-01-20 15:00:00",
+            description="Discuss project progress",
+            location="Conference Room A",
+            all_day=False,
+        )
+
+        handle_add_command(args)
+
+        # Verify CalDAV client was instantiated with config
+        mock_caldav_class.assert_called_once_with(mock_config)
+
+        # Verify client.connect() was called
+        mock_client.connect.assert_called_once()
+
+        # Verify add_event was called exactly once
+        mock_client.add_event.assert_called_once()
+
+    @patch("just_cal.commands.add.CalDAVClient")
+    @patch("just_cal.commands.add.Config")
+    def test_event_properties_passed_to_caldav(self, mock_config_class, mock_caldav_class):
+        """Test that event properties are correctly passed to CalDAV client."""
+        from just_cal.commands.add import handle_add_command
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.load = Mock()
+        mock_config.get.side_effect = lambda section, key, default=None: {
+            ("preferences", "timezone"): "America/New_York",
+            ("preferences", "default_duration"): 60,
+        }.get((section, key), default)
+        mock_config_class.return_value = mock_config
+
+        # Mock CalDAV client
+        mock_client = Mock()
+        mock_client.add_event.return_value = "test-uid-456"
+        mock_caldav_class.return_value = mock_client
+
+        args = argparse.Namespace(
+            title="Doctor Appointment",
+            start="2026-01-25 10:00:00",
+            end="2026-01-25 11:00:00",
+            description="Annual checkup",
+            location="Medical Center",
+            all_day=False,
+        )
+
+        handle_add_command(args)
+
+        # Get the Event object passed to add_event
+        event = mock_client.add_event.call_args[0][0]
+
+        # Verify all properties are correctly set
+        assert event.title == "Doctor Appointment"
+        assert event.description == "Annual checkup"
+        assert event.location == "Medical Center"
+        assert event.all_day is False
+
+    @patch("just_cal.commands.add.CalDAVClient")
+    @patch("just_cal.commands.add.Config")
+    def test_event_with_no_description_or_location(self, mock_config_class, mock_caldav_class):
+        """Test event creation with no description or location."""
+        from just_cal.commands.add import handle_add_command
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.load = Mock()
+        mock_config.get.side_effect = lambda section, key, default=None: {
+            ("preferences", "timezone"): "America/New_York",
+            ("preferences", "default_duration"): 60,
+        }.get((section, key), default)
+        mock_config_class.return_value = mock_config
+
+        # Mock CalDAV client
+        mock_client = Mock()
+        mock_client.add_event.return_value = "test-uid-789"
+        mock_caldav_class.return_value = mock_client
+
+        args = argparse.Namespace(
+            title="Quick Meeting",
+            start="2026-01-20 14:00:00",
+            end=None,
+            description=None,  # No description
+            location=None,  # No location
+            all_day=False,
+        )
+
+        handle_add_command(args)
+
+        # Get the Event object
+        event = mock_client.add_event.call_args[0][0]
+
+        # Verify properties
+        assert event.title == "Quick Meeting"
+        assert event.description is None
+        assert event.location is None
+
+    @patch("just_cal.commands.add.CalDAVClient")
+    @patch("just_cal.commands.add.Config")
+    def test_success_message_displayed(self, mock_config_class, mock_caldav_class, capsys):
+        """Test that success message is displayed after event creation."""
+        from just_cal.commands.add import handle_add_command
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.load = Mock()
+        mock_config.get.side_effect = lambda section, key, default=None: {
+            ("preferences", "timezone"): "America/New_York",
+            ("preferences", "default_duration"): 60,
+        }.get((section, key), default)
+        mock_config_class.return_value = mock_config
+
+        # Mock CalDAV client
+        mock_client = Mock()
+        mock_client.add_event.return_value = "created-event-uid"
+        mock_caldav_class.return_value = mock_client
+
+        args = argparse.Namespace(
+            title="Test Event",
+            start="2026-01-20 14:00:00",
+            end=None,
+            description=None,
+            location=None,
+            all_day=False,
+        )
+
+        handle_add_command(args)
+
+        # Check output
+        captured = capsys.readouterr()
+        assert "Event created successfully" in captured.out
+        assert "Test Event" in captured.out
+        assert "created-event-uid" in captured.out
+
+    @patch("just_cal.commands.add.CalDAVClient")
+    @patch("just_cal.commands.add.Config")
+    def test_event_uid_generated(self, mock_config_class, mock_caldav_class):
+        """Test that event has a UID when passed to CalDAV client."""
+        from just_cal.commands.add import handle_add_command
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.load = Mock()
+        mock_config.get.side_effect = lambda section, key, default=None: {
+            ("preferences", "timezone"): "America/New_York",
+            ("preferences", "default_duration"): 60,
+        }.get((section, key), default)
+        mock_config_class.return_value = mock_config
+
+        # Mock CalDAV client
+        mock_client = Mock()
+        mock_client.add_event.return_value = "server-assigned-uid"
+        mock_caldav_class.return_value = mock_client
+
+        args = argparse.Namespace(
+            title="Test Event",
+            start="2026-01-20 14:00:00",
+            end=None,
+            description=None,
+            location=None,
+            all_day=False,
+        )
+
+        handle_add_command(args)
+
+        # Get the Event object
+        event = mock_client.add_event.call_args[0][0]
+
+        # Verify event has a UID (should be a UUID)
+        assert event.uid is not None
+        assert len(event.uid) > 0
+        # UUID format check (basic - should have hyphens)
+        assert "-" in event.uid
