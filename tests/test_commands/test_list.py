@@ -196,3 +196,47 @@ class TestHandleListCommand:
 
         with pytest.raises(JustCalError, match="Invalid to date"):
             handle_list_command(args)
+
+    @patch("just_cal.commands.list.CalDAVClient")
+    @patch("just_cal.commands.list.Config")
+    def test_list_uses_12hour_format(self, mock_config_class, mock_caldav_class, capsys):
+        """Test list command displays times in 12-hour AM/PM format."""
+        # Mock config
+        mock_config = Mock()
+        mock_config.load = Mock()
+        mock_config.get.return_value = "America/New_York"
+        mock_config_class.return_value = mock_config
+
+        # Mock CalDAV client with events at different times
+        mock_client = Mock()
+        events = [
+            Event(
+                uid="morning-event",
+                title="Morning Meeting",
+                start=datetime(2026, 1, 20, 9, 30, tzinfo=UTC),
+                end=datetime(2026, 1, 20, 10, 30, tzinfo=UTC),
+            ),
+            Event(
+                uid="afternoon-event",
+                title="Afternoon Meeting",
+                start=datetime(2026, 1, 20, 14, 0, tzinfo=UTC),
+                end=datetime(2026, 1, 20, 15, 0, tzinfo=UTC),
+            ),
+        ]
+        mock_client.list_events.return_value = events
+        mock_caldav_class.return_value = mock_client
+
+        args = argparse.Namespace(from_date=None, to_date=None, format="table", limit=None)
+
+        handle_list_command(args)
+
+        # Check output uses 12-hour format with AM/PM
+        captured = capsys.readouterr()
+        assert "09:30 AM" in captured.out
+        assert "10:30 AM" in captured.out
+        assert "02:00 PM" in captured.out
+        assert "03:00 PM" in captured.out
+        # Ensure 24-hour format is NOT used
+        assert "09:30" not in captured.out.replace("09:30 AM", "")
+        assert "14:00" not in captured.out
+        assert "15:00" not in captured.out

@@ -111,8 +111,8 @@ def _print_table(events: list) -> None:
             start_str = event.start.strftime("%Y-%m-%d")
             end_str = event.end.strftime("%Y-%m-%d")
         else:
-            start_str = event.start.strftime("%Y-%m-%d %H:%M")
-            end_str = event.end.strftime("%Y-%m-%d %H:%M")
+            start_str = event.start.strftime("%Y-%m-%d %I:%M %p")
+            end_str = event.end.strftime("%Y-%m-%d %I:%M %p")
 
         location = (event.location or "")[:20]
 
