@@ -482,7 +482,7 @@ def test_get_event_by_uid_not_connected(client):
 
 
 def test_get_event_by_uid_success(client):
-    """Test successfully getting event by UID."""
+    """Test successfully getting event by UID using efficient event_by_uid method."""
     client.calendar = Mock()
 
     mock_cal_event = Mock()
@@ -497,7 +497,8 @@ DTEND:20260115T150000Z
 END:VEVENT
 END:VCALENDAR"""
 
-    client.calendar.events.return_value = [mock_cal_event]
+    # Mock the efficient event_by_uid method
+    client.calendar.event_by_uid.return_value = mock_cal_event
 
     event = client.get_event_by_uid("target-uid")
 
@@ -505,11 +506,16 @@ END:VCALENDAR"""
     assert event.title == "Target Event"
     assert hasattr(event, "_caldav_object")
     assert event._caldav_object == mock_cal_event
+    # Verify the efficient method was called
+    client.calendar.event_by_uid.assert_called_once_with("target-uid")
 
 
 def test_get_event_by_uid_not_found(client):
     """Test getting event by UID when not found."""
     client.calendar = Mock()
+
+    # Make event_by_uid raise an exception (exact match not found)
+    client.calendar.event_by_uid.side_effect = Exception("Not found")
 
     mock_cal_event = Mock()
     mock_cal_event.data = """BEGIN:VCALENDAR
@@ -523,6 +529,7 @@ DTEND:20260115T150000Z
 END:VEVENT
 END:VCALENDAR"""
 
+    # Fallback to events() returns non-matching events
     client.calendar.events.return_value = [mock_cal_event]
 
     with pytest.raises(EventNotFoundError, match="Event with UID 'target-uid' not found"):
@@ -532,6 +539,9 @@ END:VCALENDAR"""
 def test_get_event_by_partial_uid_single_match(client):
     """Test getting event by partial UID with single match."""
     client.calendar = Mock()
+
+    # Exact match won't be found for partial UID
+    client.calendar.event_by_uid.side_effect = Exception("Not found")
 
     mock_cal_event = Mock()
     mock_cal_event.data = """BEGIN:VCALENDAR
@@ -545,6 +555,7 @@ DTEND:20260115T150000Z
 END:VEVENT
 END:VCALENDAR"""
 
+    # Fallback to events() for partial match
     client.calendar.events.return_value = [mock_cal_event]
 
     # Should find event with partial UID
@@ -557,6 +568,9 @@ END:VCALENDAR"""
 def test_get_event_by_partial_uid_multiple_matches(client):
     """Test getting event by partial UID with multiple matches."""
     client.calendar = Mock()
+
+    # Exact match won't be found for partial UID
+    client.calendar.event_by_uid.side_effect = Exception("Not found")
 
     mock_cal_event1 = Mock()
     mock_cal_event1.data = """BEGIN:VCALENDAR
@@ -582,6 +596,7 @@ DTEND:20260116T150000Z
 END:VEVENT
 END:VCALENDAR"""
 
+    # Fallback to events() for partial match
     client.calendar.events.return_value = [mock_cal_event1, mock_cal_event2]
 
     # Should raise error for ambiguous partial UID
@@ -592,6 +607,9 @@ END:VCALENDAR"""
 def test_get_event_by_partial_uid_no_match(client):
     """Test getting event by partial UID with no matches."""
     client.calendar = Mock()
+
+    # Exact match won't be found
+    client.calendar.event_by_uid.side_effect = Exception("Not found")
 
     mock_cal_event = Mock()
     mock_cal_event.data = """BEGIN:VCALENDAR
@@ -605,6 +623,7 @@ DTEND:20260115T150000Z
 END:VEVENT
 END:VCALENDAR"""
 
+    # Fallback to events() returns non-matching events
     client.calendar.events.return_value = [mock_cal_event]
 
     # Should not find event with non-matching partial UID

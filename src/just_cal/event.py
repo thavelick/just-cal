@@ -81,8 +81,18 @@ class Event:
 
         uid = str(event_component.get("uid"))
         title = str(event_component.get("summary", ""))
-        start = event_component.get("dtstart").dt
-        end = event_component.get("dtend").dt
+
+        # Get start and end dates/times
+        dtstart = event_component.get("dtstart")
+        dtend = event_component.get("dtend")
+
+        if not dtstart:
+            raise ValueError("Event missing required DTSTART field")
+        if not dtend:
+            raise ValueError("Event missing required DTEND field")
+
+        start = dtstart.dt
+        end = dtend.dt
         description = (
             str(event_component.get("description", ""))
             if event_component.get("description")

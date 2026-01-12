@@ -229,29 +229,33 @@ class CalDAVClient:
             raise ConnectionError("Not connected. Call connect() first.")
 
         try:
-            # CalDAV doesn't have a direct get-by-UID method, so we search
+            # Try to get event by exact UID first using the efficient method
+            try:
+                cal_event = self.calendar.event_by_uid(uid)
+                event = Event.from_ical(cal_event.data)
+                event._caldav_object = cal_event
+                return event
+            except Exception:
+                # Exact UID not found, try partial match
+                pass
+
+            # For partial matches, we need to search through all events
+            # This is less efficient but needed for git-style short UIDs
             events = self.calendar.events()
-            exact_match = None
             partial_matches = []
 
             for cal_event in events:
-                ical_data = cal_event.data
-                event = Event.from_ical(ical_data)
-
-                # Check for exact match first
-                if event.uid == uid:
-                    event._caldav_object = cal_event
-                    exact_match = event
-                    break
+                try:
+                    ical_data = cal_event.data
+                    event = Event.from_ical(ical_data)
+                except Exception:
+                    # Skip events that can't be parsed
+                    continue
 
                 # Check for partial match (UID starts with provided string)
                 if event.uid.startswith(uid):
                     event._caldav_object = cal_event
                     partial_matches.append(event)
-
-            # Return exact match if found
-            if exact_match:
-                return exact_match
 
             # Handle partial matches
             if len(partial_matches) == 0:
