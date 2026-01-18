@@ -14,8 +14,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Security: `keyring` (system keychain integration)
 - Testing: `pytest` with coverage
 
-**Project Management:** This project uses `bd` (beads) for issue tracking. Prefix: `jc-`
-
 ## Development Commands
 
 ### Setup and Dependencies
@@ -120,8 +118,7 @@ Password security: Passwords stored in system keyring by default. Config file ge
 
 If you encounter a linting issue:
 1. **First choice:** Fix it immediately if straightforward
-2. **Second choice:** Create a bd task to fix it later if it requires more work
-3. **NEVER:** Add it to ignore list in pyproject.toml or suppress with comments
+2. **NEVER:** Add it to ignore list in pyproject.toml or suppress with comments
 
 Only acceptable ignores:
 - Genuine false positives across entire codebase
@@ -156,48 +153,3 @@ def delete_event(self, uid: str, recurrence_mode: str = "all"):
 ```
 
 Better: Remove the parameter entirely until Phase 7.
-
-## Issue Tracking with bd
-
-This project uses **bd** (beads) for task management. Issue prefix: `jc-`
-
-**IMPORTANT:**
-- **DO NOT use the TodoWrite tool.** Use bd for all task tracking.
-- **Goal: Every bead should take ~2 minutes.** Be very granular.
-- Before working on any task, see if it can be broken down into smaller beads.
-
-### Quick Reference
-```bash
-bd ready                                    # Find available work
-bd show <id>                                # View issue details
-bd create "Task description" -p 2           # Create new task with priority
-bd update <id> --status in_progress        # Claim work
-bd close <id>                               # Complete work
-bd sync                                     # Sync with git
-```
-
-### Managing Dependencies
-
-**CRITICAL:** When creating dependencies with `bd dep add`, the syntax is:
-```bash
-bd dep add <issue-that-depends> <issue-it-depends-on>
-```
-
-In other words: **the blocker comes SECOND**.
-
-**Example:** If Phase 2 must complete before Phase 3 can start:
-```bash
-bd dep add jc-phase3 jc-phase2
-# This means: jc-phase3 depends on (is blocked by) jc-phase2
-```
-
-**Common mistake:**
-```bash
-bd dep add jc-phase2 jc-phase3  # WRONG! This makes phase2 depend on phase3
-```
-
-**Verify dependencies:**
-```bash
-bd dep tree <issue-id>    # Visualize dependency tree
-bd show <issue-id>        # See what issue depends on and what depends on it
-```

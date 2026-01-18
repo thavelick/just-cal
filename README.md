@@ -291,21 +291,6 @@ make lint-fix
 make format
 ```
 
-### Project Management
-
-This project uses `bd` (beads) for task tracking:
-
-```bash
-# View available tasks
-bd ready
-
-# View all tasks
-bd list
-
-# View specific task
-bd show jc-123
-```
-
 ## Technology Stack
 
 - **CalDAV**: `python-caldav` (Nextcloud-tested)
