@@ -4,34 +4,22 @@
 class JustCalError(Exception):
     """Base exception for justcal."""
 
-    pass
-
 
 class ConfigurationError(JustCalError):
-    """Configuration related errors."""
-
-    pass
+    """Raised for configuration-related errors."""
 
 
 class AuthenticationError(JustCalError):
-    """CalDAV authentication failures."""
-
-    pass
+    """Raised for CalDAV authentication failures."""
 
 
 class ConnectionError(JustCalError):
-    """Network/connection issues."""
-
-    pass
+    """Raised for network or connection issues."""
 
 
 class EventNotFoundError(JustCalError):
-    """Event not found."""
-
-    pass
+    """Raised when a requested event cannot be found."""
 
 
 class InvalidDateError(JustCalError):
-    """Date parsing errors."""
-
-    pass
+    """Raised for date parsing errors."""

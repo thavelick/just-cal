@@ -8,12 +8,8 @@ import dateparser
 class DateParser:
     """Parse natural language and ISO format dates."""
 
-    def __init__(self, timezone: str = "America/New_York"):
-        """Initialize date parser with timezone.
-
-        Args:
-            timezone: Timezone for parsing dates (default: America/New_York)
-        """
+    def __init__(self, timezone: str = "America/New_York") -> None:
+        """Initialize date parser with timezone."""
         self.timezone = timezone
 
     def parse(self, date_string: str) -> datetime | None:
@@ -28,8 +24,7 @@ class DateParser:
         if not date_string or not date_string.strip():
             return None
 
-        # Try dateparser with timezone settings
-        dt = dateparser.parse(
+        result = dateparser.parse(
             date_string,
             settings={
                 "PREFER_DATES_FROM": "future",
@@ -37,11 +32,9 @@ class DateParser:
                 "RETURN_AS_TIMEZONE_AWARE": True,
             },
         )
+        if result:
+            return result
 
-        if dt:
-            return dt
-
-        # Fallback to datetime.fromisoformat()
         try:
             return datetime.fromisoformat(date_string)
         except (ValueError, TypeError):

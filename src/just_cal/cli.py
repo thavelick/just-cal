@@ -141,30 +141,27 @@ def main() -> NoReturn:
 
 def handle_config_command(args: argparse.Namespace) -> None:
     """Handle config subcommand."""
+    config = Config()
+
     if args.init:
-        config = Config()
         config.initialize_interactive()
         print("Configuration initialized successfully")
-    elif args.show:
-        config = Config()
-        config.load()
+        return
+
+    config.load()
+
+    if args.show:
         print(config.show())
     elif args.test:
-        config = Config()
-        config.load()
         client = CalDAVClient(config)
         client.test_connection()
         print("Connection successful!")
     elif args.set:
         key, value = args.set
-        # Parse key as section.key format
         if "." not in key:
             raise ValueError(f"Key must be in format 'section.key', got: {key}")
-        section, key_name = key.split(".", 1)
-
-        config = Config()
-        config.load()
-        config.set(section, key_name, value)
+        section, setting = key.split(".", 1)
+        config.set(section, setting, value)
         config.save()
         print(f"Configuration updated: {key} = {value}")
 
