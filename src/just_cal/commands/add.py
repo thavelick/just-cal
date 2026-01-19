@@ -1,7 +1,6 @@
 """Add command for creating calendar events."""
 
 import argparse
-import uuid
 from datetime import timedelta
 
 from just_cal.caldav_client import CalDAVClient
@@ -41,11 +40,9 @@ def handle_add_command(args: argparse.Namespace) -> None:
     if not start_dt:
         raise JustCalError(f"Invalid start date/time: {args.start}")
 
-    # Auto-detect all-day events: if start time is midnight and no explicit --all-day flag,
-    # treat as all-day event
-    is_all_day = args.all_day
-    if not is_all_day and start_dt.hour == 0 and start_dt.minute == 0 and start_dt.second == 0:
-        is_all_day = True
+    # Auto-detect all-day events when start time is midnight
+    is_midnight = start_dt.hour == 0 and start_dt.minute == 0 and start_dt.second == 0
+    is_all_day = args.all_day or is_midnight
 
     end_dt = None
     if args.end:
@@ -62,14 +59,14 @@ def handle_add_command(args: argparse.Namespace) -> None:
 
     # Parse recurrence pattern if provided
     recurrence = None
-    if hasattr(args, "recur") and args.recur:
+    if getattr(args, "recur", None):
         recurrence = RecurrenceParser.parse(args.recur)
         if not recurrence:
             raise JustCalError(f"Invalid recurrence pattern: {args.recur}")
 
     # Create event
     event = Event(
-        uid=str(uuid.uuid4()),
+        uid=Event.generate_uid(),
         title=args.title,
         start=start_dt,
         end=end_dt,

@@ -74,7 +74,9 @@ class CalDAVClient:
             # All other exceptions become connection errors
             raise ConnectionError(f"Failed to connect to CalDAV server: {e}") from e
 
-    def _find_calendar(self, calendars: list, calendar_name: str) -> caldav.Calendar | None:
+    def _find_calendar(
+        self, calendars: list[caldav.Calendar], calendar_name: str
+    ) -> caldav.Calendar | None:
         """Find a calendar by name.
 
         Args:
@@ -84,10 +86,20 @@ class CalDAVClient:
         Returns:
             Calendar object or None if not found
         """
-        for cal in calendars:
-            if cal.name == calendar_name:
-                return cal
-        return None
+        return next((cal for cal in calendars if cal.name == calendar_name), None)
+
+    def _require_connection(self) -> caldav.Calendar:
+        """Ensure we have a valid calendar connection.
+
+        Returns:
+            The connected calendar object
+
+        Raises:
+            ConnectionError: If not connected
+        """
+        if not self.calendar:
+            raise ConnectionError("Not connected. Call connect() first.")
+        return self.calendar
 
     def add_event(self, event: Event) -> str:
         """Add event to calendar.
@@ -101,12 +113,11 @@ class CalDAVClient:
         Raises:
             ConnectionError: If not connected or operation fails
         """
-        if not self.calendar:
-            raise ConnectionError("Not connected. Call connect() first.")
+        calendar = self._require_connection()
 
         try:
             ical_data = event.to_ical()
-            self.calendar.save_event(ical_data)
+            calendar.save_event(ical_data)
             return event.uid
         except Exception as e:
             raise ConnectionError(f"Failed to add event: {e}") from e
@@ -124,12 +135,11 @@ class CalDAVClient:
         Raises:
             ConnectionError: If not connected or operation fails
         """
-        if not self.calendar:
-            raise ConnectionError("Not connected. Call connect() first.")
+        calendar = self._require_connection()
 
         try:
             # Search for events in the date range
-            events = self.calendar.search(start=start, end=end, event=True, expand=True)
+            events = calendar.search(start=start, end=end, event=True, expand=True)
 
             result = []
             for cal_event in events:
@@ -140,7 +150,6 @@ class CalDAVClient:
                 except Exception as e:
                     # Skip events that can't be parsed
                     print(f"Warning: Failed to parse event: {e}")
-                    continue
 
             # Sort events chronologically by start time
             # Handle both timezone-aware and naive datetimes
@@ -153,6 +162,30 @@ class CalDAVClient:
             return sorted(result, key=sort_key)
         except Exception as e:
             raise ConnectionError(f"Failed to list events: {e}") from e
+
+    def _event_matches_query(self, event: Event, query: str, field: str) -> bool:
+        """Check if an event matches the search query.
+
+        Args:
+            event: Event to check
+            query: Lowercase search query
+            field: Field to search in (title, description, location, all)
+
+        Returns:
+            True if the event matches the query
+        """
+        if field == "title":
+            return query in event.title.lower()
+        if field == "description":
+            return event.description is not None and query in event.description.lower()
+        if field == "location":
+            return event.location is not None and query in event.location.lower()
+        # field == "all"
+        return (
+            query in event.title.lower()
+            or (event.description is not None and query in event.description.lower())
+            or (event.location is not None and query in event.location.lower())
+        )
 
     def search_events(self, query: str, field: str = "all") -> list[Event]:
         """Search events by query.
@@ -167,44 +200,34 @@ class CalDAVClient:
         Raises:
             ConnectionError: If not connected or operation fails
         """
-        if not self.calendar:
-            raise ConnectionError("Not connected. Call connect() first.")
+        self._require_connection()
 
         try:
-            # Get all events (we'll filter them ourselves)
             # CalDAV doesn't have great search capabilities, so we search client-side
-            end = datetime.now() + timedelta(days=365)  # Search next year
-            start = datetime.now() - timedelta(days=365)  # Search last year
-
+            start = datetime.now() - timedelta(days=365)
+            end = datetime.now() + timedelta(days=365)
             all_events = self.list_events(start, end)
 
             query_lower = query.lower()
-            result = []
-
-            for event in all_events:
-                if field == "all":
-                    if (
-                        query_lower in event.title.lower()
-                        or (event.description and query_lower in event.description.lower())
-                        or (event.location and query_lower in event.location.lower())
-                    ):
-                        result.append(event)
-                elif field == "title" and query_lower in event.title.lower():
-                    result.append(event)
-                elif (
-                    field == "description"
-                    and event.description
-                    and query_lower in event.description.lower()
-                ):
-                    result.append(event)
-                elif (
-                    field == "location" and event.location and query_lower in event.location.lower()
-                ):
-                    result.append(event)
-
-            return result
+            return [e for e in all_events if self._event_matches_query(e, query_lower, field)]
         except Exception as e:
             raise ConnectionError(f"Failed to search events: {e}") from e
+
+    def _parse_caldav_event(self, cal_event: caldav.CalendarObjectResource) -> Event | None:
+        """Parse a CalDAV event and attach the caldav object reference.
+
+        Args:
+            cal_event: CalDAV event object
+
+        Returns:
+            Parsed Event with _caldav_object set, or None if parsing fails
+        """
+        try:
+            event = Event.from_ical(cal_event.data)
+            event._caldav_object = cal_event
+            return event
+        except Exception:
+            return None
 
     def get_event_by_uid(self, uid: str) -> Event:
         """Get event by UID or partial UID.
@@ -223,48 +246,33 @@ class CalDAVClient:
             JustCalError: If partial UID matches multiple events
             ConnectionError: If operation fails
         """
-        if not self.calendar:
-            raise ConnectionError("Not connected. Call connect() first.")
+        calendar = self._require_connection()
 
         try:
-            # Try to get event by exact UID first using the efficient method
+            # Try exact UID first (more efficient)
             try:
-                cal_event = self.calendar.event_by_uid(uid)
-                event = Event.from_ical(cal_event.data)
-                event._caldav_object = cal_event
-                return event
+                cal_event = calendar.event_by_uid(uid)
+                event = self._parse_caldav_event(cal_event)
+                if event:
+                    return event
             except Exception:
-                # Exact UID not found, try partial match
                 pass
 
-            # For partial matches, we need to search through all events
-            # This is less efficient but needed for git-style short UIDs
-            events = self.calendar.events()
-            partial_matches = []
+            # For partial matches, search through all events
+            partial_matches = [
+                event
+                for cal_event in calendar.events()
+                if (event := self._parse_caldav_event(cal_event)) and event.uid.startswith(uid)
+            ]
 
-            for cal_event in events:
-                try:
-                    ical_data = cal_event.data
-                    event = Event.from_ical(ical_data)
-                except Exception:
-                    # Skip events that can't be parsed
-                    continue
-
-                # Check for partial match (UID starts with provided string)
-                if event.uid.startswith(uid):
-                    event._caldav_object = cal_event
-                    partial_matches.append(event)
-
-            # Handle partial matches
-            if len(partial_matches) == 0:
+            if not partial_matches:
                 raise EventNotFoundError(f"Event with UID '{uid}' not found")
             if len(partial_matches) == 1:
                 return partial_matches[0]
 
-            # Multiple partial matches - ask user to be more specific
-            matching_uids = [e.uid for e in partial_matches]
+            matching_uids = [e.uid for e in partial_matches[:5]]
             raise JustCalError(
-                f"Partial UID '{uid}' matches multiple events: {', '.join(matching_uids[:5])}. "
+                f"Partial UID '{uid}' matches multiple events: {', '.join(matching_uids)}. "
                 f"Please provide more characters."
             )
 
@@ -284,8 +292,7 @@ class CalDAVClient:
             EventNotFoundError: If event not found
             ConnectionError: If operation fails
         """
-        if not self.calendar:
-            raise ConnectionError("Not connected. Call connect() first.")
+        self._require_connection()
 
         try:
             # Get the original event
@@ -313,14 +320,11 @@ class CalDAVClient:
             EventNotFoundError: If event not found
             ConnectionError: If operation fails
         """
-        if not self.calendar:
-            raise ConnectionError("Not connected. Call connect() first.")
+        self._require_connection()
 
         try:
-            # Get the event
             event = self.get_event_by_uid(uid)
 
-            # Delete the event
             if hasattr(event, "_caldav_object"):
                 event._caldav_object.delete()
             else:

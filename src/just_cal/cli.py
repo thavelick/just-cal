@@ -110,22 +110,22 @@ def main() -> NoReturn:
         parser.print_help()
         sys.exit(0)
 
+    command_handlers = {
+        "add": handle_add_command,
+        "list": handle_list_command,
+        "search": handle_search_command,
+        "edit": handle_edit_command,
+        "delete": handle_delete_command,
+        "config": handle_config_command,
+    }
+
+    handler = command_handlers.get(args.command)
+    if not handler:
+        print(f"Unknown command: {args.command}", file=sys.stderr)
+        sys.exit(1)
+
     try:
-        if args.command == "add":
-            handle_add_command(args)
-        elif args.command == "list":
-            handle_list_command(args)
-        elif args.command == "search":
-            handle_search_command(args)
-        elif args.command == "edit":
-            handle_edit_command(args)
-        elif args.command == "delete":
-            handle_delete_command(args)
-        elif args.command == "config":
-            handle_config_command(args)
-        else:
-            print(f"Unknown command: {args.command}", file=sys.stderr)
-            sys.exit(1)
+        handler(args)
     except JustCalError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -141,30 +141,27 @@ def main() -> NoReturn:
 
 def handle_config_command(args: argparse.Namespace) -> None:
     """Handle config subcommand."""
+    config = Config()
+
     if args.init:
-        config = Config()
         config.initialize_interactive()
         print("Configuration initialized successfully")
-    elif args.show:
-        config = Config()
-        config.load()
+        return
+
+    config.load()
+
+    if args.show:
         print(config.show())
     elif args.test:
-        config = Config()
-        config.load()
         client = CalDAVClient(config)
         client.test_connection()
         print("Connection successful!")
     elif args.set:
         key, value = args.set
-        # Parse key as section.key format
         if "." not in key:
             raise ValueError(f"Key must be in format 'section.key', got: {key}")
-        section, key_name = key.split(".", 1)
-
-        config = Config()
-        config.load()
-        config.set(section, key_name, value)
+        section, setting = key.split(".", 1)
+        config.set(section, setting, value)
         config.save()
         print(f"Configuration updated: {key} = {value}")
 

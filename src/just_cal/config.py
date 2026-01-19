@@ -1,5 +1,6 @@
 """Configuration management for justcal."""
 
+import copy
 import getpass
 import os
 from pathlib import Path
@@ -18,7 +19,7 @@ class Config:
     DEFAULT_CONFIG_DIR = Path.home() / ".config" / "justcal"
     DEFAULT_CONFIG_FILE = "config.toml"
 
-    DEFAULT_CONFIG = {
+    DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
         "caldav": {
             "url": "",
             "username": "",
@@ -42,7 +43,7 @@ class Config:
             config_path: Optional path to config file. If not provided, uses default.
         """
         self.config_path = config_path or (self.DEFAULT_CONFIG_DIR / self.DEFAULT_CONFIG_FILE)
-        self.data = {}
+        self.data: dict[str, dict[str, Any]] = {}
 
     def load(self) -> None:
         """Load configuration from file.
@@ -160,43 +161,31 @@ class Config:
         print("justcal configuration setup")
         print("=" * 40)
 
-        # Start with default config
-        self.data = self.DEFAULT_CONFIG.copy()
+        default_url = "https://nextcloud.example.com/remote.php/dav"
 
-        # CalDAV URL
-        url = input(
-            f"CalDAV URL [{self.DEFAULT_CONFIG['caldav']['url'] or 'https://nextcloud.example.com/remote.php/dav'}]: "
-        ).strip()
-        if url:
-            self.set("caldav", "url", url)
-        elif not self.get("caldav", "url"):
-            self.set("caldav", "url", "https://nextcloud.example.com/remote.php/dav")
+        self.data = copy.deepcopy(self.DEFAULT_CONFIG)
 
-        # Username
+        url = input(f"CalDAV URL [{default_url}]: ").strip()
+        self.set("caldav", "url", url or default_url)
+
         username = input("Username: ").strip()
-        if username:
-            self.set("caldav", "username", username)
-        else:
+        if not username:
             raise ConfigurationError("Username is required")
+        self.set("caldav", "username", username)
 
-        # Password
         password = getpass.getpass("Password (will be stored securely): ").strip()
-        if password:
-            self.set_password(password)
-        else:
+        if not password:
             raise ConfigurationError("Password is required")
+        self.set_password(password)
 
-        # Calendar name
         calendar = input(f"Calendar name [{self.DEFAULT_CONFIG['caldav']['calendar']}]: ").strip()
         if calendar:
             self.set("caldav", "calendar", calendar)
 
-        # Timezone
         timezone = input(f"Timezone [{self.DEFAULT_CONFIG['preferences']['timezone']}]: ").strip()
         if timezone:
             self.set("preferences", "timezone", timezone)
 
-        # Save configuration
         self.save()
         print(f"\n✓ Configuration saved to {self.config_path}")
 
@@ -206,14 +195,11 @@ class Config:
         Returns:
             str: Configuration as TOML string
         """
-        # Create a copy without password
-        display_data = {}
-        for section, values in self.data.items():
-            display_data[section] = {}
-            for key, value in values.items():
-                if key == "password":
-                    display_data[section][key] = "***" if value else ""
-                else:
-                    display_data[section][key] = value
-
+        display_data = {
+            section: {
+                key: ("***" if key == "password" and value else value)
+                for key, value in values.items()
+            }
+            for section, values in self.data.items()
+        }
         return tomli_w.dumps(display_data)

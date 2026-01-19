@@ -2,11 +2,24 @@
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, time
+from datetime import date, datetime, time
 from typing import Any
 
 from icalendar import Calendar
 from icalendar import Event as ICalEvent
+
+
+def _get_optional_field(component: Any, field_name: str) -> str | None:
+    """Extract an optional string field from an iCalendar component."""
+    value = component.get(field_name)
+    return str(value) if value else None
+
+
+def _to_datetime(dt: date | datetime) -> datetime:
+    """Convert a date or datetime to datetime, using midnight for dates."""
+    if isinstance(dt, datetime):
+        return dt
+    return datetime.combine(dt, time.min)
 
 
 @dataclass
@@ -69,20 +82,13 @@ class Event:
         """
         cal = Calendar.from_ical(ical_data)
 
-        # Get the first event component
-        event_component = None
-        for component in cal.walk():
-            if component.name == "VEVENT":
-                event_component = component
-                break
-
+        event_component = next(
+            (c for c in cal.walk() if c.name == "VEVENT"),
+            None,
+        )
         if not event_component:
             raise ValueError("No VEVENT found in iCalendar data")
 
-        uid = str(event_component.get("uid"))
-        title = str(event_component.get("summary", ""))
-
-        # Get start and end dates/times
         dtstart = event_component.get("dtstart")
         dtend = event_component.get("dtend")
 
@@ -93,40 +99,16 @@ class Event:
 
         start = dtstart.dt
         end = dtend.dt
-        description = (
-            str(event_component.get("description", ""))
-            if event_component.get("description")
-            else None
-        )
-        location = (
-            str(event_component.get("location", "")) if event_component.get("location") else None
-        )
-        recurrence = str(event_component.get("rrule", "")) if event_component.get("rrule") else None
-
-        # Convert date to datetime if needed
-        if isinstance(start, datetime):
-            start_dt = start
-        else:
-            # It's a date object, convert to datetime
-            start_dt = datetime.combine(start, time.min)
-
-        if isinstance(end, datetime):
-            end_dt = end
-        else:
-            end_dt = datetime.combine(end, time.min)
-
-        # Determine if all-day event
-        all_day = not isinstance(event_component.get("dtstart").dt, datetime)
 
         return cls(
-            uid=uid,
-            title=title,
-            start=start_dt,
-            end=end_dt,
-            description=description,
-            location=location,
-            recurrence=recurrence,
-            all_day=all_day,
+            uid=str(event_component.get("uid")),
+            title=str(event_component.get("summary", "")),
+            start=_to_datetime(start),
+            end=_to_datetime(end),
+            description=_get_optional_field(event_component, "description"),
+            location=_get_optional_field(event_component, "location"),
+            recurrence=_get_optional_field(event_component, "rrule"),
+            all_day=not isinstance(start, datetime),
         )
 
     @staticmethod

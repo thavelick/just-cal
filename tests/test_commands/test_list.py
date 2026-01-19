@@ -243,11 +243,11 @@ class TestHandleListCommand:
 
 
 class TestFormatWhenColumn:
-    """Tests for _format_when_column function."""
+    """Tests for format_time_range function."""
 
     def test_format_all_day_event(self):
         """Test formatting for all-day events."""
-        from just_cal.commands.list import _format_when_column
+        from just_cal.utils.output import format_time_range
 
         event = Event(
             uid="test-uid",
@@ -257,12 +257,12 @@ class TestFormatWhenColumn:
             all_day=True,
         )
 
-        result = _format_when_column(event)
+        result = format_time_range(event)
         assert result == "Sat, 2026-01-10 - Mon, 2026-01-12"
 
     def test_format_same_day_timed_event(self):
         """Test formatting for same-day timed events."""
-        from just_cal.commands.list import _format_when_column
+        from just_cal.utils.output import format_time_range
 
         event = Event(
             uid="test-uid",
@@ -272,12 +272,12 @@ class TestFormatWhenColumn:
             all_day=False,
         )
 
-        result = _format_when_column(event)
+        result = format_time_range(event)
         assert result == "Sun, 2026-01-11 7:00 PM - 8:00 PM"
 
     def test_format_multi_day_timed_event(self):
         """Test formatting for multi-day timed events."""
-        from just_cal.commands.list import _format_when_column
+        from just_cal.utils.output import format_time_range
 
         event = Event(
             uid="test-uid",
@@ -287,5 +287,5 @@ class TestFormatWhenColumn:
             all_day=False,
         )
 
-        result = _format_when_column(event)
+        result = format_time_range(event)
         assert result == "Sat, 2026-01-10 7:00 PM - Mon, 2026-01-12 9:00 AM"
