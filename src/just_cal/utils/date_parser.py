@@ -24,6 +24,7 @@ class DateParser:
         if not date_string or not date_string.strip():
             return None
 
+        # Try natural language parsing first (handles "tomorrow", "next week", etc.)
         result = dateparser.parse(
             date_string,
             settings={
@@ -35,6 +36,7 @@ class DateParser:
         if result:
             return result
 
+        # Fall back to ISO format parsing
         try:
             return datetime.fromisoformat(date_string)
         except (ValueError, TypeError):

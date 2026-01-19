@@ -1,15 +1,14 @@
 """List command for displaying calendar events."""
 
 import argparse
-import json
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from just_cal.caldav_client import CalDAVClient
 from just_cal.config import Config
-from just_cal.event import Event
 from just_cal.exceptions import JustCalError
 from just_cal.utils.date_parser import DateParser
+from just_cal.utils.output import print_events_json, print_events_table
 
 
 def handle_list_command(args: argparse.Namespace) -> None:
@@ -61,77 +60,6 @@ def handle_list_command(args: argparse.Namespace) -> None:
 
     # Format output
     if args.format == "json":
-        _print_json(events)
+        print_events_json(events)
     else:
-        _print_table(events)
-
-
-def _print_json(events: list[Event]) -> None:
-    """Print events in JSON format."""
-    events_data = [
-        {
-            "uid": event.uid,
-            "title": event.title,
-            "start": event.start.isoformat(),
-            "end": event.end.isoformat(),
-            "description": event.description,
-            "location": event.location,
-            "all_day": event.all_day,
-        }
-        for event in events
-    ]
-    print(json.dumps(events_data, indent=2))
-
-
-def _format_when_column(event: Event) -> str:
-    """Format the WHEN column for an event.
-
-    Returns:
-        Formatted string showing when the event occurs:
-        - All-day events: "Sat, 2026-01-10 - Mon, 2026-01-12"
-        - Same-day timed events: "Sun, 2026-01-11 07:00 PM - 08:00 PM"
-        - Multi-day timed events: "Sat, 2026-01-10 7:00 PM - Mon, 2026-01-12 9:00 AM"
-    """
-    if event.all_day:
-        start_str = event.start.strftime("%a, %Y-%m-%d")
-        end_str = event.end.strftime("%a, %Y-%m-%d")
-        return f"{start_str} - {end_str}"
-
-    same_day = event.start.date() == event.end.date()
-
-    if same_day:
-        date_str = event.start.strftime("%a, %Y-%m-%d")
-        start_time = event.start.strftime("%I:%M %p").lstrip("0")
-        end_time = event.end.strftime("%I:%M %p").lstrip("0")
-        return f"{date_str} {start_time} - {end_time}"
-
-    # Multi-day timed event
-    start_str = event.start.strftime("%a, %Y-%m-%d %I:%M %p").replace(" 0", " ")
-    end_str = event.end.strftime("%a, %Y-%m-%d %I:%M %p").replace(" 0", " ")
-    return f"{start_str} - {end_str}"
-
-
-def _print_table(events: list[Event]) -> None:
-    """Print events in table format."""
-    if not events:
-        print("No events found.")
-        return
-
-    uid_width = 12
-    title_width = min(max(len(e.title) for e in events), 40)
-    title_width = max(title_width, 5)  # Minimum width for "TITLE" header
-    when_width = max(len(_format_when_column(e)) for e in events)
-    when_width = max(when_width, 4)  # Minimum width for "WHEN" header
-
-    print(f"{'UID':<{uid_width}} {'TITLE':<{title_width}} {'WHEN':<{when_width}} {'LOCATION':<20}")
-    print("-" * (uid_width + title_width + when_width + 35))
-
-    for event in events:
-        uid = event.uid[:uid_width]
-        title = event.title[:title_width]
-        when = _format_when_column(event)
-        location = (event.location or "")[:20]
-
-        print(f"{uid:<{uid_width}} {title:<{title_width}} {when:<{when_width}} {location:<20}")
-
-    print(f"\nTotal: {len(events)} event(s)")
+        print_events_table(events, use_when_column=True)

@@ -110,22 +110,22 @@ def main() -> NoReturn:
         parser.print_help()
         sys.exit(0)
 
+    command_handlers = {
+        "add": handle_add_command,
+        "list": handle_list_command,
+        "search": handle_search_command,
+        "edit": handle_edit_command,
+        "delete": handle_delete_command,
+        "config": handle_config_command,
+    }
+
+    handler = command_handlers.get(args.command)
+    if not handler:
+        print(f"Unknown command: {args.command}", file=sys.stderr)
+        sys.exit(1)
+
     try:
-        if args.command == "add":
-            handle_add_command(args)
-        elif args.command == "list":
-            handle_list_command(args)
-        elif args.command == "search":
-            handle_search_command(args)
-        elif args.command == "edit":
-            handle_edit_command(args)
-        elif args.command == "delete":
-            handle_delete_command(args)
-        elif args.command == "config":
-            handle_config_command(args)
-        else:
-            print(f"Unknown command: {args.command}", file=sys.stderr)
-            sys.exit(1)
+        handler(args)
     except JustCalError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

@@ -1,7 +1,6 @@
 """Search command for finding calendar events."""
 
 import argparse
-import json
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -10,6 +9,7 @@ from just_cal.config import Config
 from just_cal.event import Event
 from just_cal.exceptions import JustCalError
 from just_cal.utils.date_parser import DateParser
+from just_cal.utils.output import print_events_json, print_events_table
 
 TEN_YEARS_IN_DAYS = 365 * 10
 
@@ -73,9 +73,9 @@ def handle_search_command(args: argparse.Namespace) -> None:
     events = _filter_events(all_events, args.query, args.field)
 
     if args.format == "json":
-        _print_json(events)
+        print_events_json(events)
     else:
-        _print_table(events)
+        print_events_table(events, use_when_column=False)
 
 
 def _matches_field(event: Event, query_lower: str, field: str) -> bool:
@@ -108,55 +108,3 @@ def _filter_events(events: list[Event], query: str, field: str) -> list[Event]:
     """
     query_lower = query.lower()
     return [event for event in events if _matches_field(event, query_lower, field)]
-
-
-def _print_json(events: list[Event]) -> None:
-    """Print events in JSON format."""
-    events_data = [
-        {
-            "uid": event.uid,
-            "title": event.title,
-            "start": event.start.isoformat(),
-            "end": event.end.isoformat(),
-            "description": event.description,
-            "location": event.location,
-            "all_day": event.all_day,
-        }
-        for event in events
-    ]
-    print(json.dumps(events_data, indent=2))
-
-
-def _print_table(events: list[Event]) -> None:
-    """Print events in table format."""
-    if not events:
-        print("No events found.")
-        return
-
-    uid_width = 12
-    title_width = min(max(len(e.title) for e in events), 40)
-    title_width = max(title_width, 5)
-
-    print(
-        f"{'UID':<{uid_width}} {'TITLE':<{title_width}} {'START':<20} {'END':<20} {'LOCATION':<20}"
-    )
-    print("-" * (uid_width + title_width + 65))
-
-    for event in events:
-        uid = event.uid[:uid_width]
-        title = event.title[:title_width]
-        location = (event.location or "")[:20]
-
-        if event.all_day:
-            start_str = event.start.strftime("%Y-%m-%d")
-            end_str = event.end.strftime("%Y-%m-%d")
-        else:
-            start_str = event.start.strftime("%Y-%m-%d %H:%M")
-            end_str = event.end.strftime("%Y-%m-%d %H:%M")
-
-        print(
-            f"{uid:<{uid_width}} {title:<{title_width}} {start_str:<20} "
-            f"{end_str:<20} {location:<20}"
-        )
-
-    print(f"\nTotal: {len(events)} event(s)")
