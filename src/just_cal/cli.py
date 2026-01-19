@@ -5,6 +5,12 @@ import argparse
 import sys
 from typing import NoReturn
 
+from just_cal.caldav_client import CalDAVClient
+from just_cal.commands.add import handle_add_command
+from just_cal.commands.delete import handle_delete_command
+from just_cal.commands.edit import handle_edit_command
+from just_cal.commands.list import handle_list_command
+from just_cal.commands.search import handle_search_command
 from just_cal.config import Config
 from just_cal.exceptions import JustCalError
 
@@ -106,24 +112,14 @@ def main() -> NoReturn:
 
     try:
         if args.command == "add":
-            from just_cal.commands.add import handle_add_command
-
             handle_add_command(args)
         elif args.command == "list":
-            from just_cal.commands.list import handle_list_command
-
             handle_list_command(args)
         elif args.command == "search":
-            from just_cal.commands.search import handle_search_command
-
             handle_search_command(args)
         elif args.command == "edit":
-            from just_cal.commands.edit import handle_edit_command
-
             handle_edit_command(args)
         elif args.command == "delete":
-            from just_cal.commands.delete import handle_delete_command
-
             handle_delete_command(args)
         elif args.command == "config":
             handle_config_command(args)
@@ -154,8 +150,6 @@ def handle_config_command(args: argparse.Namespace) -> None:
         config.load()
         print(config.show())
     elif args.test:
-        from just_cal.caldav_client import CalDAVClient
-
         config = Config()
         config.load()
         client = CalDAVClient(config)
