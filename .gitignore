@@ -45,6 +45,9 @@ config.toml
 # Claude Code
 .claude/settings.local.json
 
+# Task tracking
+.dots/
+
 # OS
 .DS_Store
 Thumbs.db

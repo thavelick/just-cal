@@ -1,6 +1,6 @@
 """CalDAV client for interacting with Nextcloud calendars."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import caldav
 
@@ -173,8 +173,6 @@ class CalDAVClient:
         try:
             # Get all events (we'll filter them ourselves)
             # CalDAV doesn't have great search capabilities, so we search client-side
-            from datetime import timedelta
-
             end = datetime.now() + timedelta(days=365)  # Search next year
             start = datetime.now() - timedelta(days=365)  # Search last year
 

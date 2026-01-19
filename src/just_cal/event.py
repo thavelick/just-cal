@@ -2,7 +2,7 @@
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, time
 from typing import Any
 
 from icalendar import Calendar
@@ -108,15 +108,11 @@ class Event:
             start_dt = start
         else:
             # It's a date object, convert to datetime
-            from datetime import time
-
             start_dt = datetime.combine(start, time.min)
 
         if isinstance(end, datetime):
             end_dt = end
         else:
-            from datetime import time
-
             end_dt = datetime.combine(end, time.min)
 
         # Determine if all-day event

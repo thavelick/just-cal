@@ -44,7 +44,7 @@ def test_handle_config_show(mock_config_class):
     mock_config.show.assert_called_once()
 
 
-@patch("just_cal.caldav_client.CalDAVClient")
+@patch("just_cal.cli.CalDAVClient")
 @patch("just_cal.cli.Config")
 def test_handle_config_test(mock_config_class, mock_client_class):
     """Test config --test command."""

@@ -1,5 +1,6 @@
 """Configuration management for justcal."""
 
+import getpass
 import os
 from pathlib import Path
 from typing import Any
@@ -179,8 +180,6 @@ class Config:
             raise ConfigurationError("Username is required")
 
         # Password
-        import getpass
-
         password = getpass.getpass("Password (will be stored securely): ").strip()
         if password:
             self.set_password(password)
