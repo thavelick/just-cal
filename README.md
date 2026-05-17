@@ -29,11 +29,8 @@ A Python CLI utility for managing Nextcloud calendars via CalDAV.
 git clone https://github.com/yourusername/just-cal.git
 cd just-cal
 
-# Install dependencies
-uv sync
-
-# Install the CLI tool
-uv pip install -e .
+# Install the CLI tool (puts `justcal` on PATH at ~/.local/bin/justcal)
+uv tool install --editable .
 ```
 
 ## Configuration
